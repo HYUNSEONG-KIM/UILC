@@ -53,6 +53,7 @@ class LED:
         self.theta = theta
         self.phi = phi
         self.ori = np.array([math.sin(self.phi)*math.cos(self.theta), math.sin(self.phi)*math.sin(self.theta), math.cos(self.phi)])
+
     def set_orientation_coors(self, orient):
         # Value checker
         if type(orient) is not np.ndarray:
@@ -66,33 +67,91 @@ class LED:
         self.phi = math.acos(self.ori[2])
         self.theta = math.acos(self.ori[0]/math.sqrt(1-self.ori[2]**2))
 
-class LEDarray:
+class LEDmatrix:
     def __init__(self, m, I0,  xarray, yarray=np.array([[0]])):
-        self.N = xarray.shape[0] 
-        self.M = yarray.shape[0]
+        self.N = xarray.shape[1] 
+        self.M = yarray.shape[1]
         self.lednum = self.N*self.M 
         self.m = m
-        self.array = self.initLedArray(m,I0, xarray, yarray) # 2dim ndarray
+        self.matrix = self.initLedArray(m,I0, xarray, yarray) # 2dim ndarray
         pass
     
     def initLEDArray(self, m, I, xarr,yarr):
-        pass
+        ledmatrix = []
+        for j in yarr[0]:
+            ledarray=[]
+            for i in xarr[0]:
+                ledarray.append(LED(I, m, np.array([i,j,0]), 0, 0))
+            ledmatrix.append(ledarray)
+        return ledmatrix
 
-    def LED_location(self):
-        return
+    def LED_location(self, i, j):
+        return self.matrix[i][j].location
+
     def LED_graphic_view(self):
         return
+        
     def intensity(self, target, position=np.array([0,0,0]), orient = np.array([0,0,1])):
-        pass
-    def delete_LED(self, i):
-        pass
-    def add_LED(self,I,m,location,theta,phi):
-        pass
-    def LED_set(self, i, I=False, m=False, location=False, theta=False, phi=False):
-        #False: remain default setting
-        pass
+        r = target - position
+        orient = orient/math.sqrt(np.dot(orient,orient))
+        phi = math.acos(orient[2])
+        theta = math.acos(orient[0] / math.sqrt(orient[0]**2 + orient[1]**2))
+        theta = theta if orient[1] >0 else 2*math.pi - theta
 
-    def plot_intensity_data(self, xmin, xmax, ymin, ymax, z, xgrid=1E-3,ygrid=1E-3):
+        sp = math.sin(phi)
+        cp = math.cos(phi)
+        st = math.sin(theta)
+        ct = math.cos(theta)
+
+        Ryp = np.array([[cp , 0,sp],
+                        [0  , 1, 0],
+                        [-sp, 0,cp]])
+
+        Rzt = np.array([[ct,-st,0],
+                        [st, ct,0],
+                        [0 ,  0,1]])
+
+        x1 = Rzt.dot(Ryp.dot(np.array([1,0,0])))
+        y1 = Rzt.dot(Ryp.dot(np.array([0,1,0])))
+        z1 = orient
+
+        r = np.array([r.dot(x1),r.dot(y1),r.dot(z1)])
+
+        result =0
+
+        for i in self.M:
+            for j in self.N:
+                result += self.matrix[i][j].intensity(r)
+        return result
+
+    def LED_set(self, i,j, I=False, m=False, location=False, theta=False, phi=False):
+        #False: remain default setting
+        if I is not False:
+            self.matrix[i][j].I = I
+        if m is not False:
+            self.matrix[i][j].m = m
+        if location is not False:
+            self.matrixp[i][j].location = location
+        if theta is not False or phi is not False:
+            t = 0 if theta is False else theta
+            p = 0 if phi is False else phi
+            self.matrix[i][j].set_orientation_angle(t,p)
+
+    def LEDs_angle_reset(self):
+        for i in range(0, self.M):
+            for j in range(0, self.N):
+                self.matrix[i][j].set_orientation_angle(0,0)
+
+    def plot_intensity_data(self, xmin, xmax, ymin, ymax, z, xgrid=1E-3,ygrid=1E-3,position=np.array([0,0,0]), orient = np.array([0,0,1])):
+        xi = np.arange(xmin,xmax+xgrid,xgrid) 
+        yi = np.arange(ymin,ymax+ygrid,ygrid) 
+        xdata,ydata=np.meshgrid(xi, yi)
+        zdata = np.zeros(shape =xdata.shape)
+
+        for i in xdata.shape[0]:
+            for j in xdata.shape[1]:
+                tar = np.array([xdata[i][j],ydata[i][j],z])
+                zdata[i][j] = self.intensity(tar, position=position, orient =orient)
         return xdata, ydata ,zdata
 
 #===================================================
@@ -214,25 +273,63 @@ def xm(h,w,m,xe):
     r= op.root_scalar(lambda x: Ib(x,h,m,w,1,0)-Ic(x,h,m,1,0)+L,bracket=[0, xe], method="brentq" )
     return r.root
 
-def find_corres_BC(x,xe,xm,h,w,m):
-    if x<0 or x>w/2:
-        raise ValueError("Argument 'x': must be in range [{},{}] \n x value= {}".format(0,w/2,x, x>0.0))
-    elif math.isclose(x,xe,rel_tol=np.finfo(float).eps):
-        return xs
-    elif math.isclose(x,w/2, rel_tol=np.finfo(float).eps):
-        return xm
-    elif math.isclose(x,0,rel_tol=np.finfo(float).eps):
-        return w/2
-    elif xm < x and x < xe:
-        # find the xc in [xs,w/2]'
-        L = Ic(w/2,h,m,1,0)-Ib(w/2,h,m,w,1,0)
-        r=op.root_scalar(lambda x: Ib(w/2,h,m,w,1,0)-Ic(w/2,h,m,1,0) -L, bracket=[xe,w/2], method="brentq")
-        return r.root
-    elif  x<xm:
-        return w/2
-    elif xe< x and x <w/2:
-        # find the xc in [xm,xs]
-        
-        L = Ib(w/2,h,m,w,1,0)-Ic(w/2,h,m,1,0)
-        r=op.root_scalar(lambda x: Ic(w/2,h,m,1,0)-Ib(w/2,h,m,w,1,0) -L, bracket=[xm,xe], method="brentq")
-        return r.root
+
+
+def find_corres_BC(arr,xe,xm,h,w,m, append=True):
+    def bc_find(x,xe,xm,h,w,m):
+        if x<0 or x>w/2:
+            raise ValueError("Argument 'x': must be in range [{},{}] \n x value= {}".format(0,w/2,x, x>0.0))
+        elif math.isclose(x,xe,rel_tol=np.finfo(float).eps):
+            return xe
+        elif math.isclose(x,w/2, rel_tol=np.finfo(float).eps):
+            return xm
+        elif math.isclose(x,0,rel_tol=np.finfo(float).eps):
+            return w/2
+        elif xm < x and x < xe:
+            # find the xc in [xs,w/2]'
+            L = Ic(w/2,h,m,1,0)-Ib(w/2,h,m,w,1,0)
+            r=op.root_scalar(lambda x: Ib(w/2,h,m,w,1,0)-Ic(w/2,h,m,1,0) -L, bracket=[xe,w/2], method="brentq")
+            return r.root
+        elif  x<xm:
+            return w/2
+        elif xe< x and x <w/2:
+            # find the xc in [xm,xs]
+
+            L = Ib(w/2,h,m,w,1,0)-Ic(w/2,h,m,1,0)
+            r=op.root_scalar(lambda x: Ic(w/2,h,m,1,0)-Ib(w/2,h,m,w,1,0) -L, bracket=[xm,xe], method="brentq")
+            return r.root
+    
+    correspoints = []
+    for x in arr[0]:
+        correspoints.append(bc_find(x,xe,xm,h,w,m))
+    if append:
+        return np.array([np.append(arr[0], np.array(correspoints))])
+    else:
+        return np.array([correspoints])
+
+
+def H_array(m,w1,w2,h,I0=1):
+    def morena_linear(m,h,w):
+        n =2
+        L  = morena_array(m,h,n,M=1,shape="L",approx=False,half=True)
+        Lw = L
+        while Lw[2]/2 < w/2:
+            L = Lw
+            n += 1
+            Lw = morena_array(m,h,n,M=1,shape="L",approx=False,half=True)
+        return L
+
+
+    xex = xe(h,w1,m)
+    xey = xe(h,w1,m)
+    xmx = xm(h,w2,m,xex)
+    xmy = xm(h,w2,m,xey)
+
+    xarr = morena_linear(m,h,w1)
+    yarr = morena_linear(m,h,w2)
+
+    xarray = find_corres_BC(xarr, xex,xmx,w1,m)
+    yarray = find_corres_BC(yarr, xey,xmy,w2,m)
+
+    return LEDmatrix(m,I0,xarray,yarray)
+   

@@ -2,7 +2,7 @@
 This repostiory contains calculation code for building linear and rectangular LEDs array for uniform irradiation pattern for given area. 
 
 ### Language Frameworks
-**Language**: python3, C
+**Language**: python3
 
 pre-request library
 python<br>
@@ -10,9 +10,6 @@ python<br>
 * scipy
 * mathplot
 
-C <br>
-* gsl
-* 
 ### /src
 
 * uilc.py : python source code
