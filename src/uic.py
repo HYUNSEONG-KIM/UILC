@@ -73,8 +73,8 @@ class LEDmatrix:
         self.M = yarray.shape[1]
         self.lednum = self.N*self.M 
         self.m = m
-        self.matrix = self.initLedArray(m,I0, xarray, yarray) # 2dim ndarray
-        pass
+        self.matrix, self.dim = self.initLEDArray(m,I0, xarray, yarray) # 2dim ndarray
+        self.area = self.dim[0] * self.dim[1] 
     
     def initLEDArray(self, m, I, xarr,yarr):
         ledmatrix = []
@@ -83,20 +83,25 @@ class LEDmatrix:
             for i in xarr[0]:
                 ledarray.append(LED(I, m, np.array([i,j,0]), 0, 0))
             ledmatrix.append(ledarray)
-        return ledmatrix
+        vec = ledmatrix[yarr.shape[1]-1][xarr.shape[1]-1].location - ledmatrix[0][0].location
+
+        return ledmatrix, (vec[0],vec[1])
 
     def LED_location(self, i, j):
         return self.matrix[i][j].location
 
     def LED_graphic_view(self):
-        return
+        pass
         
     def intensity(self, target, position=np.array([0,0,0]), orient = np.array([0,0,1])):
         r = target - position
         orient = orient/math.sqrt(np.dot(orient,orient))
         phi = math.acos(orient[2])
-        theta = math.acos(orient[0] / math.sqrt(orient[0]**2 + orient[1]**2))
-        theta = theta if orient[1] >0 else 2*math.pi - theta
+        if math.isclose(phi,0,rel_tol=np.finfo(float).eps):
+            theta =0
+        else:
+            theta = math.acos(orient[0] / math.sqrt(orient[0]**2 + orient[1]**2))
+            theta = theta if orient[1] >0 else 2*math.pi - theta
 
         sp = math.sin(phi)
         cp = math.cos(phi)
@@ -119,8 +124,8 @@ class LEDmatrix:
 
         result =0
 
-        for i in self.M:
-            for j in self.N:
+        for i in range(0,self.M):
+            for j in range(0,self.N):
                 result += self.matrix[i][j].intensity(r)
         return result
 
@@ -189,10 +194,10 @@ def morena_coefficient(m,N,M=1,shape="L", approx = False):
                 if N ==2: # n=2 case is simple
                     result = math.sqrt(4/(m+3))
                 else:
-                    r = op.root_scalar(lambda x : morena_linear(x,N,m), bracket=[0,1], method = "brentq")
+                    r = op.root_scalar(lambda x : morena_linear(x,N), bracket=[0,1], method = "brentq")
                     result = r.root
             else :
-                r = op.minimize_scalar(lambda x: morena_linear(x,n,m), bounds=(0,1), method="bounded")
+                r = op.minimize_scalar(lambda x: morena_linear(x,N), bounds=(0,1), method="bounded")
                 result = r.x
     elif shape == "R":
         if approx == True and (N>4 and M>4) and m >30:
@@ -225,11 +230,11 @@ def morena_array(m,h,N,M=1,shape="L",approx=False,half=True):
         d = h * morena_coefficient(m,N,M,shape=shape, approx = approx)
         if half:
             if N%2 :
-                array = np.fromfunction(lambda i: (i) *d, (int((N+1)/2),1), dtype =int)
+                array = np.fromfunction(lambda i,j: (j) *d, (1,int((N+1)/2)), dtype =int)
             else :
-                array = np.fromfunction(lambda i : (1/2 +i)*d, (N,1), dtype=int)
+                array = np.fromfunction(lambda i,j : (1/2 +j)*d, (1,int(N/2)), dtype=int)
         else :
-            array = np.fromfunction(lambda i: (-(N-1)/2+i)*d, (N,1), dtype=int)
+            array = np.fromfunction(lambda i,j: (-(N-1)/2+j)*d, (1,N), dtype=int)
         
         return [(N,1),d, (d*(N-1),0), array ]
     elif shape == "R":
@@ -308,12 +313,12 @@ def find_corres_BC(arr,xe,xm,h,w,m, append=True):
         return np.array([correspoints])
 
 
-def H_array(m,w1,w2,h,I0=1):
+def H_matrix(m,w1,w2,h,I0=1):
     def morena_linear(m,h,w):
         n =2
         L  = morena_array(m,h,n,M=1,shape="L",approx=False,half=True)
         Lw = L
-        while Lw[2]/2 < w/2:
+        while Lw[2]/2 < w/2: #need more condition. xm < x <xe
             L = Lw
             n += 1
             Lw = morena_array(m,h,n,M=1,shape="L",approx=False,half=True)
