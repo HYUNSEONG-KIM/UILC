@@ -35,6 +35,17 @@ $$I(x,t) = \frac{I_0 H^m}{(H^2 + (t-x)^2)^{\frac{m}{2}+1}}$$
 
 where $x$ is a location of LED and $t$ is location of target plane in same vertical plane as Figure ().
 
+#### $\phi$ rotated LED
+
+If LED orientation is not perpedicular to surface with $\phi$ angle for plane vector, then intennsity distribution Eq() is changed to Eq()
+
+$$I(x,t,\phi)
+= \frac{I_0}{(H^2 + (t-x)^2)^{\frac{m}{2}+1}} (H \cos (\phi) + (t-x)\sin(\phi))^m.$$ 
+
+In this case, the maximum point location of distribution $t_{max}$ can be expressed as next form.
+
+$$t_{max} = x + \frac{2mH \sin(\phi)}{\sqrt{(m+2)^2-(m-2)^2 \sin^2(\phi)} +(m+2)\cos(\phi)}$$
+
 
 
 
@@ -42,7 +53,7 @@ where $x$ is a location of LED and $t$ is location of target plane in same verti
 
 The illuminous distribtuion of center and boundary point $t= 0, W/2$ induced by one pair of LEDs with distance $x$ from origin can be expressed as function $I_c(x), I_b(x)$. It is trivial that every LEDs are symmetric to z-axis. Therefore, it is enough to deal one pair of LEDs as one unit in calculation.
 
-$$I_c (x) := \\ I_b(x) := $$
+$$I_c(x) := I(x,0) + I(-x,0)  \\  \text{}\\  I_b(x) := I(x,\frac{W}{2}) + I(-x,\frac{W}{2})$$
 
 The difference function of such two distributions is defined as $$\text{Di}(x) := (I_b - I_c )(x)$$
 

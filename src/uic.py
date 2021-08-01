@@ -313,8 +313,14 @@ def find_corres_BC(arr,xe,xm,h,w,m, append=True):
         return np.array([correspoints])
 
 
-def H_matrix(m,w1,w2,h,I0=1):
-    def morena_linear(m,h,w):
+def H_matrix(m,w1,w2,h,shape="L", I0=1):
+    def morena_linear(m,h,w, xe ,xm):
+        d_2 = math.sqrt(4/(m+3))*h
+        d_3 = math.sqrt(3/(m+3))*h
+
+        if d_2 < 2*xm and d_3 < xm:
+            raise ValueError("check:\n d_2 = {d_2}, 2*xm = {xm}\n d_3 = {d_3}, xm = {xm}")
+            
         n =2
         L  = morena_array(m,h,n,M=1,shape="L",approx=False,half=True)
         Lw = L
@@ -326,20 +332,21 @@ def H_matrix(m,w1,w2,h,I0=1):
 
 
     xex = xe(h,w1,m)
-    xey = xe(h,w1,m)
     xmx = xm(h,w2,m,xex)
-    xmy = xm(h,w2,m,xey)
-
-    xarr = morena_linear(m,h,w1)
-    yarr = morena_linear(m,h,w2)
-
+    xarr = morena_linear(m,h,w1, xex, xmx)
     xarray = find_corres_BC(xarr, xex,xmx,w1,m)
-    yarray = find_corres_BC(yarr, xey,xmy,w2,m)
+    
+    if shape == "R":
+        xey = xe(h,w1,m)
+        xmy = xm(h,w2,m,xey)
+        yarr = morena_linear(m,h,w2, xey, xmy)
+        yarray = find_corres_BC(yarr, xey,xmy,w2,m)
+        return LEDmatrix(m,I0,xarray,yarray)
 
-    return LEDmatrix(m,I0,xarray,yarray)
+    return LEDmatrix(m,I0,xarray,np.array([[0]]))
    
 
-
+'''
 def generate_LEDmatrix(m,h,N,M=1, method="hyeon"):
 
     if method == "hyeon":
@@ -349,3 +356,4 @@ def generate_LEDmatrix(m,h,N,M=1, method="hyeon"):
     elif method == "morenaR"
 
     return LEDmatrix
+'''
