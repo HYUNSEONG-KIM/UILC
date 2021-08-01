@@ -48,7 +48,7 @@ The difference function of such two distributions is defined as $$\text{Di}(x) :
 
 By defining two point $x_e, x_m$ with $\text{Di}(x)$ function, the given area can be separated with three region *P*, *Q*, *R*. The $x_m$ is a root of $\text{Di}(x)$, and $x_m$ is a point such that $|\text{Di}(x_m)| = |\text{Di}(\frac{W}{2})|$. Since, the function $\text{Di}(x)$ is monotonically increasing on $[0, W/2]$ and $\text{Di}(0) < 0, \text{Di}(W/2) >0$, $x_e$ and $x_m$ exist and uniquely determined on region $[0, W/2]$.
 
-For large $m$ or small $H$ value, it is hard to find these two points, because the function $\text{Di}(x)$ show almost horizontal graph except near $x=0$ and $x = W/2$ points. Such cases we can approximate $x_m$ as point which $I(0,0) = 2 I(x_m,0)$ which is 
+For large $m$ or small $H$ value, it is hard to find these two points, because, in these cases, the function $\text{Di}(x)$ show almost horizontal graph except near $x=0$ and $x = W/2$ points. In uch situations, $x_m$ can be approximated by point such that $I(0,0) = 2 I(x,0)$ which is 
 
 $$x_m \approx H\sqrt{2^{\frac{2}{m+2}}-1} $$
 
@@ -56,7 +56,7 @@ and $x_e$ is half point of between $x_m$ and $W/2$ point.
 
 This approximation is vaild if $20/H^2 > (1+ (W/H)^2)^{(m/2 +1)}$ which indicates condition that $I_b(W/2) \approx I(W/2, W/2)$. 
 
-If width of LED device $w$ is given, the domain of function $\text{Di}(x)$ must be set as $[w/2 , W/2]$, because for $x < w/2$, the two LEDs are overlaped each other and it is physically impossible. However, practically 
+If width of LED device $w$ is given, the domain of function $\text{Di}(x)$ must be set as $[w/2 , W/2]$, because for $x < w/2$, the two LEDs are overlaped each other and it is physically impossible. 
 
 This propagation method can be combined with various method not only analytic methods but also stochastic methods such as previous simulated annealing, genetic algorithms, local search algorithm etc with finding flat condition for center with constraint LEDs are only located in *Q* region. With expanded Sparrow's criterion method [Morena](morena), it becomes fully analytical soltuion. 
 
@@ -64,11 +64,20 @@ This propagation method can be combined with various method not only analytic me
 
 ### Linear 
 
+ For given numerical value, $W, H, m$ the vaild condition can be acheived by Eq(). The one tendency of expanded Sparrow's criterion in Morena et al, LED distance decreases as number of LEDs increasing. Therefore, with $n = 2, 3$ cases 
 
 $$dH \geq 2x_m $$ 
 where N is even
 $$dH \geq x_m$$ 
 where N is odd
+
+N =2 
+
+$$d= \sqrt{\frac{4}{m+3}}$$
+
+N = 3
+
+$$d= \sqrt{\frac{3}{m+3}}$$
 
 #### Even LEDs
 

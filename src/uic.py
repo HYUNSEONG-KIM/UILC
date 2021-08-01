@@ -270,7 +270,7 @@ def Ib(t,h,m,w,I,phi):
         return (__intensity(-t,w/2,-phi,I,h,m)+__intensity(t,w/2,phi,I,h,m))
 
 def xe(h,w,m):
-    r = op.root_scalar(lambda x:Ib(t,h,m,w,1, 0)/Ic(t,h,m,1, 0) -1, bracket=[0,w/2], method="brentq")
+    r = op.root_scalar(lambda x:Ib(x,h,m,w,1, 0)/Ic(x,h,m,1, 0) -1, bracket=[0,w/2], method="brentq")
     return r.root
 
 def xm(h,w,m,xe):
@@ -338,3 +338,14 @@ def H_matrix(m,w1,w2,h,I0=1):
 
     return LEDmatrix(m,I0,xarray,yarray)
    
+
+
+def generate_LEDmatrix(m,h,N,M=1, method="hyeon"):
+
+    if method == "hyeon":
+        pass
+    elif method == "morenaL":
+        pass
+    elif method == "morenaR"
+
+    return LEDmatrix
