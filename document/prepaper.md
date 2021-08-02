@@ -59,7 +59,7 @@ The difference function of such two distributions is defined as $$\text{Di}(x) :
 
 By defining two point $x_e, x_m$ with $\text{Di}(x)$ function, the given area can be separated with three region *P*, *Q*, *R*. The $x_m$ is a root of $\text{Di}(x)$, and $x_m$ is a point such that $|\text{Di}(x_m)| = |\text{Di}(\frac{W}{2})|$. Since, the function $\text{Di}(x)$ is monotonically increasing on $[0, W/2]$ and $\text{Di}(0) < 0, \text{Di}(W/2) >0$, $x_e$ and $x_m$ exist and uniquely determined on region $[0, W/2]$.
 
-For large $m$ or small $H$ value, it is hard to find these two points, because, in these cases, the function $\text{Di}(x)$ show almost horizontal graph except near $x=0$ and $x = W/2$ points. In uch situations, $x_m$ can be approximated by point such that $I(0,0) = 2 I(x,0)$ which is 
+For large $m$ or small $H$ value, it is hard to find these two points, because, in these cases, the function $\text{Di}(x)$ show almost horizontal graph except near $x=0$ and $x = W/2$ points. In such situations, $x_m$ can be approximated by point such that $I(0,0) = 2 I(x,0)$ which is 
 
 $$x_m \approx H\sqrt{2^{\frac{2}{m+2}}-1} $$
 
