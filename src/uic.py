@@ -90,8 +90,6 @@ class LEDmatrix:
     def LED_location(self, i, j):
         return self.matrix[i][j].location
 
-    def LED_graphic_view(self):
-        pass
         
     def intensity(self, target, position=np.array([0,0,0]), orient = np.array([0,0,1])):
         r = target - position
@@ -181,11 +179,11 @@ def morena_coefficient(m,N,M=1,shape="L", approx = False):
         result = 0
         for i in range(1, N+1):
             for k in range(1, M+1):
-                result +=(1-((m+3)*(N+1-2*i)**2-(M+1-2*j)**2)*(x**2/4))*(((N+1-2*i)**2 + (M+1-2*j)**2)*(x**2/4)+1)**(-(m+6)/2)
+                result +=(1-((m+3)*(N+1-2*i)**2-(M+1-2*k)**2)*(x**2/4))*(((N+1-2*i)**2 + (M+1-2*j)**2)*(x**2/4)+1)**(-(m+6)/2)
 
 # "L" : linear case
 # "R" : Rectangular case
-
+ 
     if shape == "L":
         if approx == True and N>4 and m >30: #approximation coefficient, fast
             result = math.sqrt(3.2773/m+4.2539)
@@ -238,6 +236,7 @@ def morena_array(m,h,N,M=1,shape="L",approx=False,half=True):
         
         return [(N,1),d, (d*(N-1),0), array ]
     elif shape == "R":
+        raise ValueError()
         pass
 
 
@@ -268,6 +267,8 @@ def Ic(t,h,m,I, phi):
         return (2* __intensity(t,0,phi,I,h,m))
 def Ib(t,h,m,w,I,phi):
         return (__intensity(-t,w/2,-phi,I,h,m)+__intensity(t,w/2,phi,I,h,m))
+def Di(t,h,m,I, phi):
+    return Ib() - Ic()
 
 def xe(h,w,m):
     r = op.root_scalar(lambda x:Ib(x,h,m,w,1, 0)/Ic(x,h,m,1, 0) -1, bracket=[0,w/2], method="brentq")
@@ -313,34 +314,37 @@ def find_corres_BC(arr,xe,xm,h,w,m, append=True):
         return np.array([correspoints])
 
 
-def H_matrix(m,w1,w2,h,shape="L", I0=1):
+def H_matrix(m,w1,w2,h, shape="L", I0=1):
     def morena_linear(m,h,w, xe ,xm):
-        d_2 = math.sqrt(4/(m+3))*h
+        d_2 = math.sqrt(1/(m+3))*h
         d_3 = math.sqrt(3/(m+3))*h
 
-        if d_2 < 2*xm and d_3 < xm:
-            raise ValueError("check:\n d_2 = {d_2}, 2*xm = {xm}\n d_3 = {d_3}, xm = {xm}")
+        if d_2 < xm and d_3 < xm:
+            raise ValueError("check:\n d_2 = {d_2}, xm = {xm}\n d_3 = {d_3}, xm = {xm}")
             
         n =2
         L  = morena_array(m,h,n,M=1,shape="L",approx=False,half=True)
         Lw = L
-        while Lw[2]/2 < w/2: #need more condition. xm < x <xe
+        Lw = L
+        Lw = L
+        while Lw[2][0]/2 < xe:
+            print("{}{}".format(Lw[1]/2,xe))
             L = Lw
             n += 1
             Lw = morena_array(m,h,n,M=1,shape="L",approx=False,half=True)
-        return L
+        return L[3]
 
 
     xex = xe(h,w1,m)
     xmx = xm(h,w2,m,xex)
     xarr = morena_linear(m,h,w1, xex, xmx)
-    xarray = find_corres_BC(xarr, xex,xmx,w1,m)
+    xarray = find_corres_BC(xarr, xex,xmx,h,w1,m)
     
     if shape == "R":
         xey = xe(h,w1,m)
         xmy = xm(h,w2,m,xey)
         yarr = morena_linear(m,h,w2, xey, xmy)
-        yarray = find_corres_BC(yarr, xey,xmy,w2,m)
+        yarray = find_corres_BC(yarr, xey,xmy,h,w2,m)
         return LEDmatrix(m,I0,xarray,yarray)
 
     return LEDmatrix(m,I0,xarray,np.array([[0]]))
