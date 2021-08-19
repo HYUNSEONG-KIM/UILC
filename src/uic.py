@@ -106,6 +106,7 @@ class LEDmatrix:
         st = math.sin(theta)
         ct = math.cos(theta)
 
+        # rotation matrix
         Ryp = np.array([[cp , 0,sp],
                         [0  , 1, 0],
                         [-sp, 0,cp]])
@@ -158,24 +159,23 @@ class LEDmatrix:
         return xdata, ydata ,zdata
 
 #===================================================
-# Morena et al, Sparrow criterion methods functions
+# Extended Sparrow criterion methods 
+# based on paper: Ivan Moreno, Maximino Avendaño-Alejo, and Rumen I. Tzonchev, "Designing light-emitting diode arrays for uniform near-field irradiance," Appl. Opt. 45, 2265-2272 (2006)
 # This methods does not use LED class only calculate x,y array for each LED for linear and rectangular array. 
 #===================================================
-def morena_coefficient(m,N,M=1,shape="L", approx = False):
+def esc_coefficient(m,N,M=1,shape="L", approx = False):
 # Varaible check 
-
-
 #---------------------------------------------
 
     result = 0
 # Calculation functions
-    def morena_linear(x,N):
+    def esc_linear(x,N):
         result = 0
         for i in range(1,N+1):
             result += (1-(m+3)*(N+1-2*i)**2 * (x**2)/4)*((N+1-2*i)**2 * (x**2)/4 +1)**(-(m+6)/2)
         return result
 
-    def morena_rectangular(x, N, M):
+    def esc_rectangular(x, N, M):
         result = 0
         for i in range(1, N+1):
             for k in range(1, M+1):
@@ -192,10 +192,10 @@ def morena_coefficient(m,N,M=1,shape="L", approx = False):
                 if N ==2: # n=2 case is simple
                     result = math.sqrt(4/(m+3))
                 else:
-                    r = op.root_scalar(lambda x : morena_linear(x,N), bracket=[0,1], method = "brentq")
+                    r = op.root_scalar(lambda x : esc_linear(x,N), bracket=[0,1], method = "brentq")
                     result = r.root
             else :
-                r = op.minimize_scalar(lambda x: morena_linear(x,N), bounds=(0,1), method="bounded")
+                r = op.minimize_scalar(lambda x: esc_linear(x,N), bounds=(0,1), method="bounded")
                 result = r.x
     elif shape == "R":
         if approx == True and (N>4 and M>4) and m >30:
@@ -205,19 +205,19 @@ def morena_coefficient(m,N,M=1,shape="L", approx = False):
                 result = math.sqrt(4/(m+2))
             else:
                 try :
-                    r = op.root_scalar(lambda x: morena_rectangular(x,N,M), bracket=[0,1],method="brentq")
+                    r = op.root_scalar(lambda x: esc_rectangular(x,N,M), bracket=[0,1],method="brentq")
                     if r.converged == False:
-                        r = op.minimize_scalar(lambda x: morena_rectangular(x,l,n,m), bounds=(0,1), method="bounded")
+                        r = op.minimize_scalar(lambda x: esc_rectangular(x,l,n,m), bounds=(0,1), method="bounded")
                         result = r.x
                     else:
                         result = r.root
                 except:
-                    r = op.minimize_scalar(lambda x: morena_rectangular(x,N,M), bounds=(0,1), method="bounded")
+                    r = op.minimize_scalar(lambda x: esc_rectangular(x,N,M), bounds=(0,1), method="bounded")
                     result = r.x
     return result
 
 
-def morena_array(m,h,N,M=1,shape="L",approx=False,half=True):
+def esc_array(m,h,N,M=1,shape="L",approx=False,half=True):
 
 # Varaible check 
 
@@ -225,7 +225,7 @@ def morena_array(m,h,N,M=1,shape="L",approx=False,half=True):
 #---------------------------------------------    
 
     if shape == "L":
-        d = h * morena_coefficient(m,N,M,shape=shape, approx = approx)
+        d = h * esc_coefficient(m,N,M,shape=shape, approx = approx)
         if half:
             if N%2 :
                 array = np.fromfunction(lambda i,j: (j) *d, (1,int((N+1)/2)), dtype =int)
@@ -315,7 +315,7 @@ def find_corres_BC(arr,xe,xm,h,w,m, append=True):
 
 
 def H_matrix(m,w1,w2,h, shape="L", I0=1):
-    def morena_linear(m,h,w, xe ,xm):
+    def esc_linear(m,h,w, xe ,xm):
         d_2 = math.sqrt(1/(m+3))*h
         d_3 = math.sqrt(3/(m+3))*h
 
@@ -323,7 +323,7 @@ def H_matrix(m,w1,w2,h, shape="L", I0=1):
             raise ValueError("check:\n d_2 = {d_2}, xm = {xm}\n d_3 = {d_3}, xm = {xm}")
             
         n =2
-        L  = morena_array(m,h,n,M=1,shape="L",approx=False,half=True)
+        L  = esc_array(m,h,n,M=1,shape="L",approx=False,half=True)
         Lw = L
         Lw = L
         Lw = L
@@ -331,19 +331,19 @@ def H_matrix(m,w1,w2,h, shape="L", I0=1):
             print("{}{}".format(Lw[1]/2,xe))
             L = Lw
             n += 1
-            Lw = morena_array(m,h,n,M=1,shape="L",approx=False,half=True)
+            Lw = esc_array(m,h,n,M=1,shape="L",approx=False,half=True)
         return L[3]
 
 
     xex = xe(h,w1,m)
     xmx = xm(h,w2,m,xex)
-    xarr = morena_linear(m,h,w1, xex, xmx)
+    xarr = esc_linear(m,h,w1, xex, xmx)
     xarray = find_corres_BC(xarr, xex,xmx,h,w1,m)
     
     if shape == "R":
         xey = xe(h,w1,m)
         xmy = xm(h,w2,m,xey)
-        yarr = morena_linear(m,h,w2, xey, xmy)
+        yarr = esc_linear(m,h,w2, xey, xmy)
         yarray = find_corres_BC(yarr, xey,xmy,h,w2,m)
         return LEDmatrix(m,I0,xarray,yarray)
 
