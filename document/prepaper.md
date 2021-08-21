@@ -14,23 +14,19 @@ This paper studied design method for uniform irradiance intensity on linear and 
 
 ## INTRODUCTION
 
-The plane light source which irradiates light uniformly had been widely used for many industries and research field. 
+Uniform irradiance light source has been widely studied and used for many industries and research fields. Since, Light Emitting Diode(LED) is developed, most optical devices have been replaced with LED device because of its high energy efficiency, fast reaction time, compact size and robustness, and long usage time \cite{khatib2009sustainability, kalyani2017principles}. However, because normal LED sources show spatial irradiation intensity distribution for viewing angle, it is hard to construct uniform areal intensity light device with multiple LED components. 
 
-Since, Light Emitting Diode(LED) is developed, most optical devices have been replaced with LED device because of its high energy efficiency, fast reaction time, and long usage time [Add LED's pros]. However, because normal LED sources show spatial itensity distribution for viewing angle, it is hard to construct plane light with LED devices.
+In such limitation, various attemptions have been studied by researchers. The target plane intensity flatness depends on three parameters of each LEDs in array; optical power, irradiation distribution, and location. Generally, restraining two of those parameters and optimize rest value. Practically, optimizing location of light source requires less components to construct real device from calculation, since, the other methods require lens design for change irradiation distribution \cite{Whang2009} or additional control unit to modulate power of each LEDs\cite{PraneethVarma:17}. For LED location, it is trivial that infinite uniform LED distribution shows flat irradiance intensity for any target plane. In addition, central area intensity induced by finite LED array will approximate flat intensity well if they are symmetric around center and uniformly located. However, minimizing number of LED for light device is critical consideration. As their number increasing, maintains and power efficiency are get worse, especially, for high power LED, heat flow is added to them. Morena et al \cite{Moreno:06}, suggested the analytic solution using generalized Lambertian LED model for linear, rectangular, circular array cases with expansion of Sparrow resolution criterion \cite{Barakat:62}. This study restricts LED power and irradiation distribution(;generalized Lambertian) and optimize LED array to find maximum LED distance between two LED in array.  
+After, this analytical solution is introduced, various stochastic methods are studied for optimizing LED location. Zhoupig et al, first studied with stochastic method; stimulated annealing algorithm for different optical model LEDs for finite area\cite{Su:12}. Sourav Pal used genetic algorithm and evolutionary programming \cite{Pal:15}. Lei et al, tried basic local search method \cite{Lei:0}. Yu et al, suggested particle swarm optimization\cite{yu2018research}.
 
-
-
-Morena et al[], suggested the analytic solution using generalized Lambertian LED model for linear, square, circular array cases with expansion of Sparrow criterion[].
-
-Zhoupig et al, first studied with stochastic method; stimulated annealing algorithm.
-
-Sourav Pal used genetic algorithm and evolutionary programming. Lei et al, tried basic local search method. Yu et al, 
-
-Since, results of previous papers show rapid decreasing near boundary of LEDs array. For example, ---- show xx\% area show under 60\% intensity for center point. This problem is shared by all stochastic methods. 
-
-This paper introduces design method for enhancing boundary intensity in analytical approach. This method can be used with previous paper solution not only for analytic but also stochastic. Outline of method is using intensity contribution function for center and boundary point to separate area in three regions A, B, C. The A, B 
+There are several differences between analytical solutions and stochastic solutions. For analytic solutions, all LEDs are assumed share same optical properties(intensity and Lambertian coefficient) and plane area is not determined at initial calculation. The total area is an outcome of calculation. Meanwhile in stochastic methods, plane area is given value for calculation and have less constraints for optical models of LEDs. They even can use various LED models for one calculations such as from different Lambertian value to general polynomial model\cite{}. These freedom of stocastic methods are useful for many case, however there are several disadvantages.  
+Practically, there are many case which LED locations are only permitted for area equal or smaller than target plane. Even those case, expanded Sparrow's criterion method still useful. However, they shows rapid decreasing distribution near boundary. 
 
 
+
+Since, results of previous papers show rapid decreasing near boundary of LEDs array. For example, ---- show xx\% area show under 60\% intensity for center point. 
+
+In this paper, the analytical algorithm is introduced for computing LED array with given rectangular target area. This algorithm use center-boundary irradiance intensity matching in order to prevent rapid decreasing near boundary. 
 
 ## FORMULAS AND EQUATIONS
 
