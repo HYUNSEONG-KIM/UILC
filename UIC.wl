@@ -9,64 +9,64 @@ GeneralizedLambertian::useage = "GeneralizedLambertian[I0,r,\[Theta],s] is a Gen
 GeneralizedLamberXY::useage ="GeneralizedLambertian[I0,r,\[Theta],s] is a Generalized Lambertian model with vertical 2D plane, x: source location below plane, t: target location above plane, h: distance between two plane."
 
 
-GeneralizedLamberXYPhase::useage  "GeneralizedLamberXYPhase[I0,x,t,h,s,\[Phi]] is a phase effect added generalized Lambertian 2D model. \[Phi]>0 outward rotation of source from center to boundary."
+GeneralizedLamberXYPhase::useage  "GeneralizedLamberXYPhase[I0,x,t,h,s,\[Phi]] is a phase effect added Generalized Lambertian 2D model. \[Phi]>0 outward rotation of source from center to boundary."
 
 
-LamberIntensityCenter::useage ="LamberIntensityCenter[I0,x,h,s]: Center irradiance intensity of two s-generalized Lambertian light sources at x, -x location for h distance target plane"
+LamberIntensityCenter::useage =""
 
 
-LamberIntensityBoundary::useage ="Boundary irradiance intensity of two s-generalized Lambertian light sources at x, -x location for h distance target plane"
+LamberIntensityBoundary::useage =""
 
 
-LamberD::useage ="LamberD[a,d,s]: Normalized boundary, center irradiance difference of two s-generalized Lambertian light sources at d, -d location"
+LamberD::useage =""
 
 
-LamberFindCorrespondingPointQR::useage ="LamberFindCorrespondingPointQR[dp,de,a,h,s]: Find corresponding points in Q-R region for point in such region using normalized LamberD function"
+LamberFindCorrespondingPointQR::useage =""
 
 
-LamberFindde::useage ="LamberFindde[a,h,s]: using normalized LamberD function"
+LamberFindde::useage =""
 
 
-LamberFinddm::useage ="LamberFinddm[de,a,h,s]: using LamberFindCorrespondingPointQR function"
+FLamberinddm::useage =""
 
 
-LamberFinddmApprox::useage ="LamberFinddmApprox[s]:"
+LamberFinddmApprox::useage =""
 
 
-LamberFinddeApprox::useage ="LamberFinddeApprox[s,a]:"
+LamberFinddeApprox::useage =""
 
 
-LamberDi::useage ="LamberDi[I0, x, h, w,s]:"
+LamberDi::useage =""
 
 
-LamberFindCorrespondingxPointQR::useage ="LamberFindCorrespondingxPointQR[x,xe,a,h,s]:"
+LamberFindCorrespondingxPointQR::useage =""
 
 
-LamberFindxe::useage ="LamberFindxe[w_,h_,s_]:"
+LamberFindxe::useage =""
 
 
-LamberFindxm::useage ="LamberFindxm[xe_,w_,h_,s_]:"
+LamberFindxm::useage =""
 
 
-LamberFindxeApprox::useage ="LamberFindxmApprox[s_,h_]:"
+LamberFindxeApprox::useage =""
 
 
-LamberFindxmApprox::useage ="LamberFindxeApprox[s_,h_,w_]:"
+LamberFindxmApprox::useage =""
 
 
-ESCCoefficientLinear::useage ="ESCCoefficientLinear[n_,s_]:"
+ESCCoefficientLinear::useage =""
 
 
-ESCCoefficientRectangular::useage ="ESCCoefficientRectangular[n_,m_,s_]:"
+ESCCoefficientRectangular::useage =""
 
 
-ESCArrayLinearN::useage ="ESCArrayLinearN[n_,s_,h_,half_]:"
+ESCArrayLinearN::useage =""
 
 
-ESCArrayRectangularNM::useage ="ESCArrayRectangularNM[n_,m_,s_,h_,half_]:"
+ESCArrayRectangularNM::useage =""
 
 
-(*ArrayIntensity::useage ="ArrayIntensity[x_,t_,s_,h_,w_]:"*)
+ArrayIntensity::useage =""
 
 
 Begin["`Private`"]
@@ -116,7 +116,7 @@ LamberFinddmApprox[s_]:= Sqrt[Power[2,2/(s+2)]-1]
 LamberFinddeApprox[s_,a_]:=1/6*LamberFinddmApprox[s] + 1/4*a
 
 
-LamberDi[I0_, x_, h_, w_,s_] := I0/h^2*D[w/h,x/h,s]
+LamberDi[I0_, x_, h_, w_,s_] := D[w/h,x/h,s]
 
 
 LamberFindCorrespondingxPointQR[x_,xe_,a_,h_,s_]:=h*LamberFindCorrespondingPointQR[x/h,xe/h,a,h,s];
@@ -139,35 +139,20 @@ Module[{d,f,x0=0.6},
 	If[Mod[s,2]<1,x0=0.8,x=0.6];
 	f[x_]:=Sum[Power[(n+1-2*i)^2*(x/2)^2+1,-((s+6)/2)]*(1-(s+3)*(n+1-2*i)^2 *(x/2)^2),{i,n}];
 	If[EvenQ[n],
-		If[n==2,d=Power[4/(s+3),1/2], d =x/. FindRoot[f[x],{x,x0}];];,
-		d =x/. FindMinimum[{f[x], 0<= x<= 1},{x,x0}][[2]];
+		if[n==2,d=Power[4/(s+3),1/2], d= x/. FindRoot[f[x],{x,x0}];];
+		d= x/. FindMinimum[{f[x], 0<= x<= 1},{x,x0}][[2]];
 	];
-	Return[ d]
-];
-
+	Return[d];
+	];
 
 
 ESCCoefficientRectangular[n_,m_,s_]:=
-Module[{},
-	f[x_]:= Sum[Power[((n+1-2*i)^2+(m+1-2*j)^2)*(x^2/4)+1, -(s+6)/2] *(1-((s+3)*(n+1-2*i)^2-(m+1-2*j)^2)*(x^2/4)),{j,m},{i,n}];
-	if[n==m && n==2, 
-		Return[Sqrt[4/(s+2)]]; v
-		,
-		(*Root try -> Minimize*)
-		Check[
-			d = x/.FindRoot[f[x],{x,0.5}];
-			, 
-			d= x/.FindMinimum[{f[x], 0<= x<= 1},{x,0.5}][[2]];
-		];
-	];
-	Return[d];
-];
-
+Module[];
 
 
 ESCArrayLinearN[n_,s_,h_,half_]:=
 Module[{},
-	d= h* ESCCoefficientLinear[n,s];
+	d=h* ESCCoefficientLinear[[n,s];
 	L = {n,d, d*(n-1)};
 	If[half ==0,
 		AppendTo[L, Table[(-(n-1)/2+i-1)*d,{i,n}]];
@@ -176,34 +161,22 @@ Module[{},
 			AppendTo[L, Table[(1/2+i)*d,{i,n/2}]];
 			,
 			AppendTo[L, Table[(i-1)*d,{i,(n+1)/2}]];
-			];
+			;
 		];
-		Return[L];
+		Return[L]
 ];
 
 
-
-ESCArrayRectangularNM[n_,m_,s_,h_]:=
-Module[{},
-	d = h* ESCCoefficientRectangular[n,m,s];
-	wx = (m-1)*d;
-	wy = (n-1)*d;
-	xarray = Table[];
-	yarray = Table[];
-	Return[Table[xarray,yarray]]
-];
+ESCArrayRectangularNM[n_,m_,s_,h_,]
 
 
-(*
-ArrayIntensity[arr_,t_,s_,h_,w_]:=
+ArrayIntensity[x_,t_,s_,h_,w_]:=
 Module[{n,i},
-	m=Length[arr[1]];
-	n=Length[arr[2]];
+	n=Length[x];
 	i = N[];
 	If[];
 	Return[i];
-];
-*)
+]
 
 
 End[];
