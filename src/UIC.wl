@@ -81,33 +81,30 @@ GeneralizedLamberXY[I0_,x_,t_,h_,s_]:=I0*h^s/Power[(h^2+(t-x)^2),s/2+1]
 GeneralizedLamberXYPhase[I0_,x_,t_,h_,s_,\[Phi]_]:= I0* 1/Power[(h^2+(t-x)^2),s/2+1]*(h*Cos[\[Phi]]+(t-x)*Sin[\[Phi]])^s
 
 
-LamberIntensityCenter[I0_,x_,h_,s_]:=GeneralizedLamberXY[I0,x,0,,h,s] + GeneralizedLamberXY[I0,-x,0,,h,s] 
+LamberIntensityCenter[I0_,x_,h_,s_]:= GeneralizedLamberXY[I0,x,0,h,s] + GeneralizedLamberXY[I0,-x,0,h,s] 
 
 
 LamberIntensityBoundary[I0_,x_,h_,w_,s_]:=GeneralizedLamberXY[I0,x,w/2,h,s] + GeneralizedLamberXY[I0,-x,w/2,h,s] 
 
 
-LamberD[a_,d_,s_]:= Power[(1+(1/2*a + d)^2),-((s+2)/2)] + Power[(1+(1/2*a - d)^2),-((s+2)/2)]-2*Power[(1+(d)^2),-((s+2)/2)]
+LamberD[a_,d_,s_]:= Power[(1+((1/2)*a + d)^2),-((s+2)/2)] + Power[(1+((1/2)*a - d)^2),-((s+2)/2)]-2*Power[(1+(d)^2),-((s+2)/2)]
 
 
 LamberFindCorrespondingPointQR[dp_,de_,a_,h_,s_]:=
 Module[{dc, l},
-	If[dp>de,
-		l = D[a,dp,s];
-		dc = t/.FindRoot[-D[a,t,m]-l,{t,de/2}]
-		,
-		l = -D[a,dp,s];
-		dc = t/. FindRoot[D[a,t,s]-l,{t, de/2+a/4}]
-	];
+		l = LamberD[a,dp,s];
+		dc = t/. FindRoot[LamberD[a,t,s]-l,{t, de/2+a/4}]
 	Return[dc];
 ];
 
 
+LamberFindde[a_,s_]:= d/. FindRoot[LamberD[a,d,s],{d,a/4}]
 
-LamberFindde[a_,h_,s_]:= d/. FindRoot[D[a,d,s],{d,a/4}]
-
-
-LamberFinddm[de_,a_,h_,s_]:= LamberFindCorrespondingPointQR[a/2,de,a,h,s]
+LamberFinddm[de_,a_,h_,s_]:= 
+Module[{d},
+    d = x/. FindRoot[LamberD[a,x,s]+LamberD[a,a/2,s],{x,de*0.5}];
+    Return[d];
+];
 
 
 LamberFinddmApprox[s_]:= Sqrt[Power[2,2/(s+2)]-1]
@@ -116,16 +113,16 @@ LamberFinddmApprox[s_]:= Sqrt[Power[2,2/(s+2)]-1]
 LamberFinddeApprox[s_,a_]:=1/6*LamberFinddmApprox[s] + 1/4*a
 
 
-LamberDi[I0_, x_, h_, w_,s_] := I0/h^2*D[w/h,x/h,s]
+LamberDi[I0_, x_, h_, w_,s_] := (I0/h^2)*LamberD[w/h,x/h,s]
 
 
 LamberFindCorrespondingxPointQR[x_,xe_,a_,h_,s_]:=h*LamberFindCorrespondingPointQR[x/h,xe/h,a,h,s];
 
 
-LamberFindxe[w_,h_,s_]:= h* LamberFindde[w/h,h,s];
+LamberFindxe[w_,h_,s_]:= h* LamberFindde[w/h,s];
 
 
-LamberFindxm[xe_,w_,h_,s_]:= h*Finddm[xe/h,w/h,h,s];
+LamberFindxm[xe_,w_,h_,s_]:= h*LamberFinddm[xe/h,w/h,h,s];
 
 
 LamberFindxmApprox[s_,h_]:=h*LamberFinddmApprox[s];
@@ -148,17 +145,19 @@ Module[{d,f,x0=0.6},
 
 
 ESCCoefficientRectangular[n_,m_,s_]:=
-Module[{},
+Module[{d},
 	f[x_]:= Sum[Power[((n+1-2*i)^2+(m+1-2*j)^2)*(x^2/4)+1, -(s+6)/2] *(1-((s+3)*(n+1-2*i)^2-(m+1-2*j)^2)*(x^2/4)),{j,m},{i,n}];
 	if[n==m && n==2, 
 		Return[Sqrt[4/(s+2)]]; v
 		,
 		(*Root try -> Minimize*)
-		Check[
-			d = x/.FindRoot[f[x],{x,0.5}];
-			, 
-			d= x/.FindMinimum[{f[x], 0<= x<= 1},{x,0.5}][[2]];
-		];
+         Quiet[
+             Check[
+                d = x/.FindRoot[f[x],{x,0.5}];
+                , 
+                d= x/.FindMinimum[{f[x], 0<= x<= 1},{x,0.5}][[2]];
+            ];
+        ];
 	];
 	Return[d];
 ];
