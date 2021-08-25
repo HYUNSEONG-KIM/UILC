@@ -1,0 +1,47 @@
+```{r}
+precison_step <- 1e-4
+w <- 200e-3
+d<- 40e-3
+dx <- 1e-3
+dh <- 1e-3
+dm<-0.01
+Ninitial <- 200
+N <- 1
+# LED constant
+m <- 1
+I <- 360000
+```
+
+
+```{r}
+# -For_Root_Cal,Fint_dm-
+# Get the distance between two LED based on the Ivan's work
+#-For_Root_Cal: the function for calculation
+#-Fint_dm: Find the dm by the find root of the For_Root_Cal(Even), local minimum (ODD)
+set_param <- function(N, md){
+  Ninitial <<- N
+  m <<- md
+}
+
+For_Root_Cal<- function(D){
+  a<-seq(1,Ninitial,1)
+  a<- (1-(m+3)*((Ninitial+1-2*a)* (D/2))^2)/(1+((D/2)*(Ninitial+1-2*a)^2))^(m/2+3)
+  return(sum(a))
+}
+Fint_dm <-function(){
+  dk<-0
+  root1 <-0
+  if(Ninitial %% 2 == 0){
+    dk <- uniroot(For_Root_Cal, lower=0, upper=2, tol=1e-10)
+    root1 <- dk[[1]]
+    dk <- uniroot(For_Root_Cal, lower=root1-0.01,upper=root1+0.01, tol=1e-10)
+    df <- dk$root
+  }else{
+    dk <- optimize(For_Root_Cal,c(0,2), tol=1e-10)$minimum
+    root1 <- dk
+    dk<-optimize(For_Root_Cal,c(dk-0.01,dk+0.01), tol=1e-10)$minimum
+  }
+  return(df)
+}
+```
+

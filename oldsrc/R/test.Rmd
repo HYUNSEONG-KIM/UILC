@@ -1,0 +1,26 @@
+```{r}
+f_Morena_linear <- function( x, m,n){
+  y <- 0.0
+  for( i in (1:n)){
+    y <- y+ (1-(m+3)*( (n+1-2*(i))*(x/2) )**2 ) / (( 1+ ((x/2)*(n+1-2*(i)))**2)**(m/2+3))
+  }
+  return(y)
+}
+```
+
+
+```{r}
+ x <- seq(0.0,1.0,0.0001)
+ plot(x, f_Morena_linear(x, 3.0,2), type='l', col='red', ylim=c(-0.5,3))
+ lines(x, f_Morena_linear(x, 3.0,3), type='l', col='blue')
+ lines(x, f_Morena_linear(x, 3.0,4), type='l', col='red')
+ abline(h =0.0)
+ lines(x, f_Morena_linear(x, 3.0,5), type='l', col='blue')
+ lines(x, f_Morena_linear(x, 3.0,6), type='l', col='red')
+ lines(x, f_Morena_linear(x, 3.0,7), type='l', col='blue')
+ lines(x, f_Morena_linear(x, 3.0,8), type='l', col='red')
+ lines(x, f_Morena_linear(x, 3.0,9), type='l', col='blue')
+ lines(x, f_Morena_linear(x, 3.0,10), type='l', col='red')
+ lines(x, f_Morena_linear(x, 3.0,11), type='l', col='blue')
+
+```
