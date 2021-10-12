@@ -53,9 +53,11 @@ LamberFindxeApprox::useage ="LamberFindxmApprox[s_,h_]:"
 
 LamberFindxmApprox::useage ="LamberFindxeApprox[s_,h_,w_]:"
 
-xeApproxEsti::useage=""
 
-xmApproxEsti::useage=""
+xeApproxEsti::useage="xeApproxEsti[s,a]"
+
+
+xmApproxEsti::useage="xmApproxEsti[s,a]"
 
 
 ESCCoefficientLinear::useage ="ESCCoefficientLinear[n_,s_]:"
@@ -104,6 +106,7 @@ Module[{dc, l},
 
 LamberFindde[a_,s_]:= d/. FindRoot[LamberD[a,d,s],{d,a/4}]
 
+
 LamberFinddm[de_,a_,s_]:= 
 Module[{d},
     d = x/. FindRoot[LamberD[a,x,s]+LamberD[a,a/2,s],{x,de*0.5}];
@@ -134,7 +137,9 @@ LamberFindxmApprox[s_,h_]:=h*LamberFinddmApprox[s];
 
 LamberFindxeApprox[s_,h_,w_]:=h*LamberFinddeApprox[s,w/h];
 
+
 xeApproxEsti[s_,a_]:=Module[{x,l}, l=LamberFindde[a,s]; x = Abs[N[LamberFinddeApprox[s,a]]-l]/l *100; Return[x]];
+
 
 xmApproxEsti[s_,a_]:=Module[{x,l}, de = LamberFindde[a,s]; l=LamberFinddm[de,a,s]; x = Abs[N[LamberFinddmApprox[s]]-l]/l *100; Return[x]];
 
