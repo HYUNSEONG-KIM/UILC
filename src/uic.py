@@ -157,6 +157,10 @@ class LEDmatrix:
                 tar = np.array([xdata[i][j],ydata[i][j],z])
                 zdata[i][j] = self.intensity(tar, position=position, orient =orient)
         return xdata, ydata ,zdata
+    
+    @classmethod
+    def esc_coefficient(cls, m, N, M=1, shap="L", approx=False):
+        
 
 #===================================================
 # Extended Sparrow criterion methods 
