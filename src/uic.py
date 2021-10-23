@@ -22,7 +22,6 @@ class LED:
             raise ValueError("The led location must be array-like objects.\n location variable type:{}".format(type(location)))
         elif len(location) !=3:
             raise ValueError("The array size must be 3.\n ndarray size:{}".format(len(location)))
-
         elif not isinstance(location[0],(int,float,np.integer)):
             raise ValueError("The vector type must be numerical type float or int.\n ndarray type:{}, element type:{}".format(location.dtype,type(location[0])))
         
@@ -293,38 +292,93 @@ def esc_array(m,h,N,M=1,shape="L",approx=False,half=True):
 # This method does not use LED class only calculates x,y array for each LED for linear and rectangular array. 
 #===================================================
 
-def __intensity(x,t,phi, i, h ,m):
-    if math.isclose(phi,0,rel_tol=np.finfo(float).eps):
-        return h**m * i/(h**2 + (x-t)**2)**(m/2+1)
-    else:
-        sphi = math.copysign(1,phi)
-        l = sphi*(x-h/math.tan(phi))
-        sphi = math.copysign(1,phi)
-        if sphi*t< l:
-            messge = "Check phi, x, t\n sgn(phi) t > sgn(phi)*(x-h cot(phi))\n x:{}, t:{}, phi:{}".format(x,t,phi)
-            raise ValueError(messge)
-        r2 = (h**2 +(x-t)**2)**(m/2 +1)
-        ang = (h * math.cos(phi) + (t-x)*math.sin(phi))**m
+class bc_utils:
+    def __init__(self):
+        pass
 
-    return i *ang/r2 
+    def __intensity(x,t,phi, i, h ,s):
+        if math.isclose(phi,0,rel_tol=np.finfo(float).eps):
+            return h**s * i/(h**2 + (x-t)**2)**(s/2+1)
+        else:
+            sphi = math.copysign(1,phi)
+            l = sphi*(x-h/math.tan(phi))
+            sphi = math.copysign(1,phi)
+            if sphi*t< l:
+                messge = "Check phi, x, t\n sgn(phi) t > sgn(phi)*(x-h cot(phi))\n x:{}, t:{}, phi:{}".format(x,t,phi)
+                raise ValueError(messge)
+            r2 = (h**2 +(x-t)**2)**(s/2 +1)
+            ang = (h * math.cos(phi) + (t-x)*math.sin(phi))**s
+            return i *ang/r2
+        
+    @classmethod
+    def ic(cls,x,h,s,I,phi=0):
+        return (2*cls. __intensity(x,0,phi,I,h,s))
+    @classmethod
+    def ib(cls,x,h,s,w,I,phi=0):
+        return (cls.__intensity(-x,w/2,-phi,I,h,s)+cls.__intensity(x,w/2,phi,I,h,s))
+    @classmethod
+    def Di(cls, x,h,s,w,I,phi=0):
+        return cls.ic(x,h,s,I,phi) - cls.ib(x,h,s,w,I,phi)
+    @classmethod
+    def D(cls, alpha, d, s):
+        return 1/(1+ (0.5*alpha+d)**2)**(s/2+1) + 1/(1+ (0.5*alpha-d)**2)**(s/2+1) - 2/(1+d**2)**(s/2+1)
+    @classmethod
+    def find_de(cls, alpha, s, approx=False):
+        if approx:
+            return 0.25*alpha +  math.sqrt(2**(2/(s+2)) -1)/6 
+        else:
+            r = op.root_scalar(lambda x: cls.D(alpha,x, s), bracket=[0, alpha/2], method="brentq")
+            return r.root
+    @classmethod
+    def find_xe(cls, h, w, s, approx=False):
+        alpha = w/h
+        d = cls.find_de(alpha, s, approx=approx)
+        return h* d
+    @classmethod
+    def find_dm(cls, alpha, s, de, approx=False):
+        if approx:
+            return  math.sqrt(2**(2/(s+2)) -1)
+        else:
+            r = op.root_scalar(lambda x: cls.D(alpha, x, s), bracket = [0,de], method="brentq")
+            return r.root
+    @classmethod
+    def find_xm(cls, h, w, s, xe, approx=False):
+        alpha = w/h
+        de = xe/h
+        d = cls.find_dm(alpha, s, de, approx=approx)
+        return h*d
+    @classmethod
+    def find_corresponding_point(cls, arr, xe, xm, h, w, s, append=True):
 
-def Ic(t,h,m,I, phi): 
-        return (2* __intensity(t,0,phi,I,h,m))
-def Ib(t,h,m,w,I,phi):
-        return (__intensity(-t,w/2,-phi,I,h,m)+__intensity(t,w/2,phi,I,h,m))
-def Di(t,h,m,I, phi):
-    return Ib() - Ic()
+        def core(x, xe, xm, h, w, s):
+            if x<0 or x>w/2:
+                raise ValueError("Argument 'x': must be in range [{},{}] \n x value= {}".format(0,w/2,x, x>0.0))
+            elif math.isclose(x,xe,rel_tol=np.finfo(float).eps):
+                return xe
+            elif math.isclose(x,w/2, rel_tol=np.finfo(float).eps):
+                return xm
+            elif math.isclose(x,0,rel_tol=np.finfo(float).eps):
+                return w/2
+            elif xm < x and x < xe:
+                # find the xc in [xs,w/2]'
+                L = Ic(w/2,h,m,1,0)-Ib(w/2,h,m,w,1,0)
+                r=op.root_scalar(lambda x: Ib(w/2,h,m,w,1,0)-Ic(w/2,h,m,1,0) -L, bracket=[xe,w/2], method="brentq")
+                return r.root
+            elif  x<xm:
+                return w/2
+            elif xe< x and x <w/2:
+                # find the xc in [xm,xs]
 
-def xe(h,w,m):
-    r = op.root_scalar(lambda x:Ib(x,h,m,w,1, 0)/Ic(x,h,m,1, 0) -1, bracket=[0,w/2], method="brentq")
-    return r.root
+                L = Ib(w/2,h,m,w,1,0)-Ic(w/2,h,m,1,0)
+                r=op.root_scalar(lambda x: Ic(w/2,h,m,1,0)-Ib(w/2,h,m,w,1,0) -L, bracket=[xm,xe], method="brentq")
+                return r.root
+        # check arr is array like object
+        if not hasattr(arr, "__len__"):
 
-def xm(h,w,m,xe):
-    L = Ib(w/2,h,m,w,1,0)-Ic(w/2,h,m,1,0)
-    r= op.root_scalar(lambda x: Ib(x,h,m,w,1,0)-Ic(x,h,m,1,0)+L,bracket=[0, xe], method="brentq" )
-    return r.root
-
-
+        if append:
+            pass
+        else:
+            pass
 
 def find_corres_BC(arr,xe,xm,h,w,m, append=True):
     def bc_find(x,xe,xm,h,w,m):
