@@ -6,31 +6,48 @@ from scipy import optimize as op
 # For hemosphere lens and far field irradiation case, it fits well such situations.
 # the theta, phi represent the orientation of LED, normally it is considered as positive z axis direction.
 # theta: angle between xy projection vector of LED orientation and x-axis. Range= [0-2pi)
-# phi: angle between z-axis and LED orient vector. Range = [0,pi/2)
+# phi: angle between z-axis and LED orient vector. Range = [-pi/2,pi/2]
 class LED:
-    def __init__(self, I, m, location, theta, phi):
-        if isinstance(I,(int,float)) and isinstance(m,(int,float)) and isinstance(phi,(int,float)):
-            if I >0 and m >0 and abs(phi) < math.pi/2:
+    def __init__(self, I, s, location, theta, phi):
+        if isinstance(I,(int,float)) and isinstance(s,(int,float)) and isinstance(phi,(int,float)):
+            if I >0 and s >0 and abs(phi) < math.pi/2 :
                 pass
             else:
-                raise ValueError("The argument I, m must be positive value and phi is an angle lying on [-pi/2,pi/2]\n I={}, m ={}, phi={}".format(I,m,phi))
+                raise ValueError("The argument I, s must be positive value and phi is an angle lying on [-pi/2,pi/2]\n I={}, s ={}, phi={}".format(I, s, phi))
         else:
-            raise ValueError("The argument I,m,phi must be numerical type int, float:\n I={}, m ={}, phi={}".format(type(I),type(m),type(phi)))
+            raise ValueError("The argument I, s, phi must be numerical type int, float:\n I={}, s ={}, phi={}".format(type(I),type(s),type(phi)))
 
-        if type(location) is not np.ndarray:
-            raise ValueError("The led location must be numpy array ndarray with length 3.\n location variable type:{}".format(type(location)))
-        elif location.size !=3:
-            raise ValueError("The vector size must be 3.\n ndarray size:{}".format(location.size))
+        #location variable check
+        if not hasattr(location, "__len__"):
+            raise ValueError("The led location must be array-like objects.\n location variable type:{}".format(type(location)))
+        elif len(location) !=3:
+            raise ValueError("The array size must be 3.\n ndarray size:{}".format(len(location)))
+
         elif not isinstance(location[0],(int,float,np.integer)):
             raise ValueError("The vector type must be numerical type float or int.\n ndarray type:{}, element type:{}".format(location.dtype,type(location[0])))
         
         self.I=I
-        self.m =m 
-        self.location = location 
+        self.s =s
+        self.location = location if isinstance(location, np.ndarray) else np.array(location)
         self.phi = phi
         self.theta =theta
         self.ori = np.array([math.sin(self.phi)*math.cos(self.theta), math.sin(self.phi)*math.sin(self.theta), math.cos(self.phi)])
     
+    @classmethod
+    def fromOri(cls, I, s, location, ori):
+        if not hasattr(ori, "__len__"):
+            raise ValueError("The orientation vector must be array-like objects.\n ori variable type:{}".format(type(ori)))
+        elif len(ori) !=3:
+            raise ValueError("The array size must be 3.\n ndarray size:{}".format(len(ori)))
+        
+        tsize = math.sqrt(np.dot(ori,ori))
+        ori = ori / tsize
+        
+        phi = math.acos(ori[2])
+        theta = math.acos(ori[0]/math.sin(phi))
+
+        return cls(I, s, location, theta, phi)
+
     def intensity(self, target):
         # Value checker
         if type(target) is not np.ndarray:
@@ -45,7 +62,7 @@ class LED:
         dsize=math.sqrt(r2)
         cos = np.dot(d,self.ori)/dsize
 
-        return self.I/r2 * math.pow(cos,self.m)
+        return self.I/r2 * math.pow(cos,self.s)
 
     def set_orientation_angle(self, theta, phi):
         # Value checker
@@ -63,9 +80,29 @@ class LED:
         elif not isinstance(orient[0],(int,float,np.integer)):
             raise ValueError("The vector type must be numerical type float or int.\n ndarray type:{}, element type:{}".format(orient.dtype,type(orient[0])))  
         
-        self.orient = orient/math.sqrt(np.dot(orient,orient))
+        self.ori = orient/math.sqrt(np.dot(orient,orient))
         self.phi = math.acos(self.ori[2])
         self.theta = math.acos(self.ori[0]/math.sqrt(1-self.ori[2]**2))
+
+        @property
+        def ori(self):
+            return self.ori 
+         
+        @ori.setter
+        def ori(self, theta, phi):
+            self.theta = theta
+            self.phi = phi
+            self.ori = np.array([math.sin(self.phi)*math.cos(self.theta), math.sin(self.phi)*math.sin(self.theta), math.cos(self.phi)])
+
+    @staticmethod
+    def cal_intensity( I, s, location, theta, phi, target):
+        d= target - location
+        ori = np.array([math.sin(phi)*math.cos(theta), math.sin(phi)*math.sin(theta), math.cos(phi)])
+        r2 = np.dot(d,d)
+        dsize = math.sqrt(r2)
+        cos = np.dot(d,ori)/dsize
+
+        return I/r2 * math.pow(cos,s)
 
 class LEDmatrix:
     def __init__(self, m, I0,  xarray, yarray=np.array([[0]])):
@@ -88,6 +125,11 @@ class LEDmatrix:
         return ledmatrix, (vec[0],vec[1])
 
     def LED_location(self, i, j):
+        if i<0 or i > N-1:
+            raise ValueError("i must be in range [0,N-1]\n i={}, N={}".format(i,self.N))
+        if j<0 or j > M-1:
+            raise ValueError("j must be in range [0,N-1]\n j={}, M={}".format(i,self.M))
+
         return self.matrix[i][j].location
 
         
@@ -157,9 +199,10 @@ class LEDmatrix:
                 tar = np.array([xdata[i][j],ydata[i][j],z])
                 zdata[i][j] = self.intensity(tar, position=position, orient =orient)
         return xdata, ydata ,zdata
-    
+    '''
     @classmethod
     def esc_coefficient(cls, m, N, M=1, shap="L", approx=False):
+    '''
         
 
 #===================================================
@@ -167,12 +210,12 @@ class LEDmatrix:
 # based on paper: Ivan Moreno, Maximino Avendaño-Alejo, and Rumen I. Tzonchev, "Designing light-emitting diode arrays for uniform near-field irradiance," Appl. Opt. 45, 2265-2272 (2006)
 # This methods does not use LED class only calculate x,y array for each LED for linear and rectangular array. 
 #===================================================
-def esc_coefficient(m,N,M=1,shape="L", approx = False):
-# Varaible check 
-#---------------------------------------------
 
+def esc_coefficient(m,N,M=1,shape="L", approx = False):
+    # Varaible check 
+    #---------------------------------------------
     result = 0
-# Calculation functions
+    # Calculation functions
     def esc_linear(x,N):
         result = 0
         for i in range(1,N+1):
@@ -184,10 +227,8 @@ def esc_coefficient(m,N,M=1,shape="L", approx = False):
         for i in range(1, N+1):
             for k in range(1, M+1):
                 result +=(1-((m+3)*(N+1-2*i)**2-(M+1-2*k)**2)*(x**2/4))*(((N+1-2*i)**2 + (M+1-2*j)**2)*(x**2/4)+1)**(-(m+6)/2)
-
-# "L" : linear case
-# "R" : Rectangular case
- 
+    # "L" : linear case
+    # "R" : Rectangular case
     if shape == "L":
         if approx == True and N>4 and m >30: #approximation coefficient, fast
             result = math.sqrt(3.2773/m+4.2539)
@@ -220,13 +261,13 @@ def esc_coefficient(m,N,M=1,shape="L", approx = False):
                     result = r.x
     return result
 
-
+'''
 def esc_array(m,h,N,M=1,shape="L",approx=False,half=True):
+    
+    # Varaible check 
 
-# Varaible check 
 
-
-#---------------------------------------------    
+    #---------------------------------------------    
 
     if shape == "L":
         d = h * esc_coefficient(m,N,M,shape=shape, approx = approx)
@@ -242,7 +283,7 @@ def esc_array(m,h,N,M=1,shape="L",approx=False,half=True):
     elif shape == "R":
         raise ValueError()
         pass
-
+'''
 
 #-------------------------------------------------------------
 
