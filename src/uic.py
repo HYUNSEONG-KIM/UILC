@@ -25,12 +25,11 @@ class LED:
         elif not isinstance(location[0],(int,float,np.integer)):
             raise ValueError("The vector type must be numerical type float or int.\n ndarray type:{}, element type:{}".format(location.dtype,type(location[0])))
         
-        self.I=I
-        self.s =s
-        self.location = location if isinstance(location, np.ndarray) else np.array(location)
-        self.phi = phi
-        self.theta =theta
-        self.ori = np.array([math.sin(self.phi)*math.cos(self.theta), math.sin(self.phi)*math.sin(self.theta), math.cos(self.phi)])
+        self.__I=I
+        self.__s =s
+        self.__location = location if isinstance(location, np.ndarray) else np.array(location)
+        self.__angle = {"phi":phi,"theta":theta}
+        self.__ori = np.array([math.sin(self.phi)*math.cos(self.__angle["theta"]), math.sin(self.__angle["phi"])*math.sin(self.__angle["theta"]), math.cos(self.__angle["phi"])])
     
     @classmethod
     def fromOri(cls, I, s, location, ori):
@@ -56,19 +55,12 @@ class LED:
         elif not isinstance(target[0],(int,float,np.integer)):
             raise ValueError("The vector type must be numerical type float or int.\n ndarray type:{}, element type:{}".format(target.dtype,type(target[0])))
 
-        d= target - self.location
+        d= target - self.__location
         r2 = np.dot(d,d)
         dsize=math.sqrt(r2)
-        cos = np.dot(d,self.ori)/dsize
+        cos = np.dot(d,self.__ori)/dsize
 
-        return self.I/r2 * math.pow(cos,self.s)
-
-    def set_orientation_angle(self, theta, phi):
-        # Value checker
-
-        self.theta = theta
-        self.phi = phi
-        self.ori = np.array([math.sin(self.phi)*math.cos(self.theta), math.sin(self.phi)*math.sin(self.theta), math.cos(self.phi)])
+        return self.I/r2 * math.pow(cos,self.__s)
 
     def set_orientation_coors(self, orient):
         # Value checker
@@ -83,20 +75,71 @@ class LED:
         self.phi = math.acos(self.ori[2])
         self.theta = math.acos(self.ori[0]/math.sqrt(1-self.ori[2]**2))
 
-        @property
-        def ori(self):
-            return self.ori 
+    #properties getter and setter
+    @property
+    def Intensity(self, I):
+        return self.__I
+    @Intensity.setter
+    def set_intensity(self, I):
+        self.__I = I
+        return 0
+    @property
+    def Lamber(self, s):
+        return self.__s
+    @Lamber.setter
+    def set_Lamber(self, s):
+        self.__s = s
+        return 0
+    @property
+    def ori(self):
+        return self.__ori 
          
-        @ori.setter
-        def ori(self, theta, phi):
-            self.theta = theta
-            self.phi = phi
-            self.ori = np.array([math.sin(self.phi)*math.cos(self.theta), math.sin(self.phi)*math.sin(self.theta), math.cos(self.phi)])
+    @ori.setter
+    def set_ori_from_angle(self, theta, phi):
+        self.__angle["theta"] = theta
+        self.__angle["phi"] = phi
+        self.__ori = np.array([math.sin(phi)*math.cos(theta), math.sin(phi)*math.sin(theta), math.cos(phi)])
+        return 0
+    @ori.setter
+    def set_ori_from_vector(self, ori):
+        if not hasattr(ori, "__len__"):
+            raise ValueError("The orientation vector must be array-like objects.\n ori variable type:{}".format(type(ori)))
+        elif len(ori) !=3:
+            raise ValueError("The array size must be 3.\n ndarray size:{}".format(len(ori)))
+        
+        tsize = math.sqrt(np.dot(ori,ori))
+        self.__ori = ori / tsize
+        
+        self.__angle["phi"] = math.acos(ori[2])
+        self.__angle["theta"] = math.acos(ori[0]/math.sin(phi))
+
+        return 0
+    @property
+    def location(self):
+        return self.__location
+    @location.setter
+    def set_location(self, location):
+        if not hasattr(location, "__len__"):
+            raise ValueError("The orientation vector must be array-like objects.\n ori variable type:{}".format(type(ori)))
+        elif len(location) !=3:
+            raise ValueError("The array size must be 3.\n ndarray size:{}".format(len(ori)))
+
+        self.__location = location if isinstance(location, np.ndarray) else np.array(location)
+        return 0
+
 
     @staticmethod
-    def cal_intensity(I, s, location, theta, phi, target):
+    def cal_intensity_lamber_angle(I, s, location, theta, phi, target):
         d= target - location
         ori = np.array([math.sin(phi)*math.cos(theta), math.sin(phi)*math.sin(theta), math.cos(phi)])
+        r2 = np.dot(d,d)
+        dsize = math.sqrt(r2)
+        cos = np.dot(d,ori)/dsize
+
+        return I/r2 * math.pow(cos,s) 
+    @staticmethod
+    def cal_intensity_lamber_ori(I, s, location, ori, target):
+        d= target - location
         r2 = np.dot(d,d)
         dsize = math.sqrt(r2)
         cos = np.dot(d,ori)/dsize
@@ -113,7 +156,7 @@ class ESC:
     def __init__(self):
         pass
     @classmethod
-    def esc_coefficient(cls, m,N,M=1,shape="L", approx = False):
+    def coefficient(cls, m,N,M=1,shape="L", approx = False):
         # Varaible check 
         #---------------------------------------------
         result = 0
@@ -163,9 +206,9 @@ class ESC:
                         result = r.x
         return result
     @classmethod
-    def esc_array(cls, m,h,N,M=1,shape="L",approx=False,half=True):
+    def array(cls, m,h,N,M=1,shape="L",approx=False,half=True):
         if shape == "L":
-            d = h * cls.esc_coefficient(m,N,M,shape=shape, approx = approx)
+            d = h * cls.coefficient(m,N,M,shape=shape, approx = approx)
             if half:
                 if N%2 :
                     array = np.fromfunction(lambda i,j: (j) *d, (1,int((N+1)/2)), dtype =int)
@@ -174,14 +217,12 @@ class ESC:
             else :
                 array = np.fromfunction(lambda i,j: (-(N-1)/2+j)*d, (1,N), dtype=int)
             return [(N,1),d, (d*(N-1),0), array ]
+        '''
         elif shape == "R":
             raise ValueError()
         else:
             raise ValueError()
-
-
-#-------------------------------------------------------------
-
+        '''
 
 #===================================================
 # Boundary enhancement method by Hyeon.
@@ -290,7 +331,7 @@ def H_matrix(m,w1,w2,h, shape="L", I0=1):
             raise ValueError("check:\n d_2 = {d_2}, xm = {xm}\n d_3 = {d_3}, xm = {xm}")
             
         n =2
-        L  = esc_array(m,h,n,M=1,shape="L",approx=False,half=True)
+        L  = ESC.array(m,h,n,M=1,shape="L",approx=False,half=True)
         Lw = L
         Lw = L
         Lw = L
@@ -298,36 +339,23 @@ def H_matrix(m,w1,w2,h, shape="L", I0=1):
             print("{}{}".format(Lw[1]/2,xe))
             L = Lw
             n += 1
-            Lw = esc_array(m,h,n,M=1,shape="L",approx=False,half=True)
+            Lw = ESC.array(m,h,n,M=1,shape="L",approx=False,half=True)
         return L[3]
 
 
-    xex = xe(h,w1,m)
-    xmx = xm(h,w2,m,xex)
+    xex = bc_utils.find_xe(h,w1,m)
+    xmx = bc_utils.find_xm(h,w2,m,xex)
     xarr = esc_linear(m,h,w1, xex, xmx)
-    xarray = find_corres_BC(xarr, xex,xmx,h,w1,m)
+    xarray = bc_utils.find_corresponding_points(xarr, xex,xmx,h,w1,m)
     
     if shape == "R":
-        xey = xe(h,w1,m)
-        xmy = xm(h,w2,m,xey)
+        xey = bc_utils.find_xe(h,w1,m)
+        xmy = bc_utils.find_xm(h,w2,m,xey)
         yarr = esc_linear(m,h,w2, xey, xmy)
-        yarray = find_corres_BC(yarr, xey,xmy,h,w2,m)
+        yarray = bc_utils.find_corresponding_points(yarr, xey,xmy,h,w2,m)
         return LEDmatrix(m,I0,xarray,yarray)
 
     return LEDmatrix(m,I0,xarray,np.array([[0]]))
-   
-
-'''
-def generate_LEDmatrix(m,h,N,M=1, method="hyeon"):
-
-    if method == "hyeon":
-        pass
-    elif method == "morenaL":
-        pass
-    elif method == "morenaR"
-
-    return LEDmatrix
-'''
 
 
 class LEDmatrix:
@@ -425,8 +453,5 @@ class LEDmatrix:
                 tar = np.array([xdata[i][j],ydata[i][j],z])
                 zdata[i][j] = self.intensity(tar, position=position, orient =orient)
         return xdata, ydata ,zdata
-    '''
-    @classmethod
-    def esc_coefficient(cls, m, N, M=1, shap="L", approx=False):
-    '''
+
        
