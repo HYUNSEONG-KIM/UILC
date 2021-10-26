@@ -48,14 +48,18 @@ class LED:
 
     def intensity(self, target):
         # Value checker
-        if type(target) is not np.ndarray:
-            raise ValueError("The target argument must be numpy array type.")
-        elif target.size !=3:
-            raise ValueError("The vector size must be 3.\n ndarray size:{}".format(target.size))
+        if not hasattr(target, "__len__"):
+            raise ValueError("The led location must be array-like objects.\n location variable type:{}".format(type(target)))
+        elif len(target) !=3:
+            raise ValueError("The array size must be 3.\n ndarray size:{}".format(len(target)))
         elif not isinstance(target[0],(int,float,np.integer)):
             raise ValueError("The vector type must be numerical type float or int.\n ndarray type:{}, element type:{}".format(target.dtype,type(target[0])))
 
+<<<<<<< Updated upstream
         d= target - self.__location
+=======
+        d= target if isinstance(target, np.ndarray) else np.array(target) - self.location
+>>>>>>> Stashed changes
         r2 = np.dot(d,d)
         dsize=math.sqrt(r2)
         cos = np.dot(d,self.__ori)/dsize
@@ -64,10 +68,10 @@ class LED:
 
     def set_orientation_coors(self, orient):
         # Value checker
-        if type(orient) is not np.ndarray:
-            raise ValueError("The led orient must be numpy array ndarray with length 3.\n location variable type:{}".format(type(orient)))
-        elif orient.size !=3:
-            raise ValueError("The vector size must be 3.\n ndarray size:{}".format(orient.size))
+        if not hasattr(orient, "__len__"):
+            raise ValueError("The led location must be array-like objects.\n location variable type:{}".format(type(orient)))
+        elif len(orient) !=3:
+            raise ValueError("The array size must be 3.\n ndarray size:{}".format(len(orient)))
         elif not isinstance(orient[0],(int,float,np.integer)):
             raise ValueError("The vector type must be numerical type float or int.\n ndarray type:{}, element type:{}".format(orient.dtype,type(orient[0])))  
         
@@ -156,7 +160,11 @@ class ESC:
     def __init__(self):
         pass
     @classmethod
+<<<<<<< Updated upstream
     def coefficient(cls, m,N,M=1,shape="L", approx = False):
+=======
+    def coefficient(cls, s,N,M=1,shape="L", approx = False):
+>>>>>>> Stashed changes
         # Varaible check 
         #---------------------------------------------
         result = 0
@@ -164,23 +172,23 @@ class ESC:
         def esc_linear(x,N):
             result = 0
             for i in range(1,N+1):
-                result += (1-(m+3)*(N+1-2*i)**2 * (x**2)/4)*((N+1-2*i)**2 * (x**2)/4 +1)**(-(m+6)/2)
+                result += (1-(s+3)*(N+1-2*i)**2 * (x**2)/4)*((N+1-2*i)**2 * (x**2)/4 +1)**(-(s+6)/2)
             return result
 
         def esc_rectangular(x, N, M):
             result = 0
             for i in range(1, N+1):
                 for k in range(1, M+1):
-                    result +=(1-((m+3)*(N+1-2*i)**2-(M+1-2*k)**2)*(x**2/4))*(((N+1-2*i)**2 + (M+1-2*j)**2)*(x**2/4)+1)**(-(m+6)/2)
+                    result +=(1-((s+3)*(N+1-2*i)**2-(M+1-2*k)**2)*(x**2/4))*(((N+1-2*i)**2 + (M+1-2*j)**2)*(x**2/4)+1)**(-(s+6)/2)
         # "L" : linear case
         # "R" : Rectangular case
         if shape == "L":
-            if approx == True and N>4 and m >30: #approximation coefficient, fast
-                result = math.sqrt(3.2773/m+4.2539)
+            if approx == True and N>4 and s >30: #approximation coefficient, fast
+                result = math.sqrt(3.2773/(s+4.2539))
             else:
                 if N%2 ==0: # even LED
                     if N ==2: # n=2 case is simple
-                        result = math.sqrt(4/(m+3))
+                        return math.sqrt(4/(s+3))
                     else:
                         r = op.root_scalar(lambda x : esc_linear(x,N), bracket=[0,1], method = "brentq")
                         result = r.root
@@ -188,11 +196,11 @@ class ESC:
                     r = op.minimize_scalar(lambda x: esc_linear(x,N), bounds=(0,1), method="bounded")
                     result = r.x
         elif shape == "R":
-            if approx == True and (N>4 and M>4) and m >30:
-                result = math.sqrt(1.2125/(m-3.349))
+            if approx == True and (N>4 and M>4) and s >30:
+                result = math.sqrt(1.2125/(s-3.349))
             else:
                 if N == M and N==2:
-                    result = math.sqrt(4/(m+2))
+                    result = math.sqrt(4/(s+2))
                 else:
                     try :
                         r = op.root_scalar(lambda x: esc_rectangular(x,N,M), bracket=[0,1],method="brentq")
@@ -206,7 +214,11 @@ class ESC:
                         result = r.x
         return result
     @classmethod
+<<<<<<< Updated upstream
     def array(cls, m,h,N,M=1,shape="L",approx=False,half=True):
+=======
+    def array(cls, s,h,N,M=1,shape="L",approx=False,half=True):
+>>>>>>> Stashed changes
         if shape == "L":
             d = h * cls.coefficient(m,N,M,shape=shape, approx = approx)
             if half:
