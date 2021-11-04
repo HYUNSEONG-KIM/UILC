@@ -55,11 +55,7 @@ class LED:
         elif not isinstance(target[0],(int,float,np.integer)):
             raise ValueError("The vector type must be numerical type float or int.\n ndarray type:{}, element type:{}".format(target.dtype,type(target[0])))
 
-<<<<<<< Updated upstream
-        d= target - self.__location
-=======
         d= target if isinstance(target, np.ndarray) else np.array(target) - self.location
->>>>>>> Stashed changes
         r2 = np.dot(d,d)
         dsize=math.sqrt(r2)
         cos = np.dot(d,self.__ori)/dsize
@@ -160,11 +156,7 @@ class ESC:
     def __init__(self):
         pass
     @classmethod
-<<<<<<< Updated upstream
-    def coefficient(cls, m,N,M=1,shape="L", approx = False):
-=======
     def coefficient(cls, s,N,M=1,shape="L", approx = False):
->>>>>>> Stashed changes
         # Varaible check 
         #---------------------------------------------
         result = 0
@@ -214,11 +206,7 @@ class ESC:
                         result = r.x
         return result
     @classmethod
-<<<<<<< Updated upstream
-    def array(cls, m,h,N,M=1,shape="L",approx=False,half=True):
-=======
     def array(cls, s,h,N,M=1,shape="L",approx=False,half=True):
->>>>>>> Stashed changes
         if shape == "L":
             d = h * cls.coefficient(m,N,M,shape=shape, approx = approx)
             if half:
