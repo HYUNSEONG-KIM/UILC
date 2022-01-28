@@ -1,7 +1,7 @@
 /*======================================================================================================
 Licence: GPL_3 version
 
-Author: Kim, Hyeon Sung
+Author: Kim, Hyun Sung
 Date: 2021.01.13
 
 This code is a library functions for the calculation the uniform illuination patteren with 
@@ -22,7 +22,7 @@ This library provide the
 i) Morena's Analytic Solution
 ii) Siemulated Annealing Solution
 iii) Genetic Algorithm Solution
-iV) Morena-Hyeon Solution
+iV) Morena-Hyun Solution
 
 For Linear and Rectangle Grid Array
 
@@ -305,9 +305,9 @@ double UILC_f_Morena_get_Morena_Boundary(
     const double md1,
     const double md2
 );
-// "UILC_Hyeon.c"----------------------------------------------------------
+// "UILC_Hyun.c"----------------------------------------------------------
 /*
-UILC_LED_Arr UILC_f_Hyeon_get_Arr(
+UILC_LED_Arr UILC_f_Hyun_get_Arr(
 
 );
 */
