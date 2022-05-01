@@ -1,39 +1,29 @@
 # UILC
-This repostiory contains calculation code for building linear and rectangular LEDs array for uniform irradiation pattern for given system.
 
+## About The Project
 
-### Language and library Frameworks
+Uniform irradiation light sources are widely used in many industrial and research fields. This project is a python implementation of finding LED locations of array that produces unifrom irradiation on target plane.
+
+### Language and library dependencies
+
 **Language** 
 * python3
 
-**pre-request library for each implementation**
+**pre-request library for implementation**
 
-1. python<br>
 * numpy
 * scipy
 
+## Usage
 
-**Warning**
+For more details and examples, please refer to the `usage.ipynb` file in the `/docs` directory.
 
-The GNU Scientific Library is distributed under GNU General Public License. Following this License, the C implementation is distributed under GPL license v 3.0.
+## License
 
+It is distributed with MIT License. The full text can refer to the `LICENSE` file.
 
-### /src
+## Theorical Background
 
-* uilc.py 
-
-## Description of routines
-
-There are sevaral differences in three types of implementations.
-
-The python type covers most wide region of routines in papers.
-## Examples
-
-
----
-> esc
----
-
-## Refereneces and Further Reading
+See details of implementation and theorical background in `/docs/theories.ipynb`
 
 
