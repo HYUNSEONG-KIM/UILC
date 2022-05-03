@@ -44,6 +44,13 @@ class utils: # basic Utils and functions including mathematical routines
         else:
             raise ValueError("axis argument must be 'x' or 'y, current={}".format(axis))
     @classmethod
+    def get_2d_array(cls, xarr, yarr, dim= 1):
+        if dim ==2:
+            xarr = cls.get_axis_list(xarr)
+            yarr = cls.get_axis_list(yarr)
+
+        return  np.flip(np.array(np.meshgrid(xarr,yarr)).transpose(), axis=None)
+    @classmethod
     def getlocation(cls, i, j, array): # (x-order, y-order) conversion for matrix row, column order indexing.
         return array[j,i]
     @classmethod
