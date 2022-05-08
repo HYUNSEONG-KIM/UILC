@@ -411,7 +411,7 @@ class disop: #Distribution optimization including bc expansion method
         def solve_discretized(n, s, W, H, getfd=False):
             d= W/n
             F = np.fromfunction(lambda i, j: utils.intensity_function(s, H, d*i, d*j), (n,n), dtype=float)
-            delta = np.linalg.solve(F, np.ones(n))
+            delta = np.linalg.solve(F, np.ones(n), assume_a='pos')
             if getfd:
                 return delta, F
             return delta.min()
