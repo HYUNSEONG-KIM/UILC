@@ -260,11 +260,14 @@ class esc: #Expanded Sparrow Criterion
         n1 = n-1
         d1 =  esc.coefficient(s, n1)*H
         nxe1 = (n1-1)/2 *d1
+        
         n2 = n-2
         d2 = esc.coefficient(s, n2)*H
         nxe2 = (n2-1)/2 *d2
+        
         di1 = xlim - nxe1
         di2 = xlim - nxe2
+
         n = n1 if di1 < di2 else n2
 
         return n
@@ -342,6 +345,11 @@ class disop: #Distribution optimization including bc expansion method
         dx = xarr[1] - xarr[0]
         dy = yarr[1] - yarr[0] if M > 1 else 0
 
+        if (xe - xarr.max()) < 2*dx/5:
+            xarr[0] = xarr[N-1] = xe
+        if dy != 0 and (ye - yarr.max()) < dy/2:
+            yarr[0] = yarr[N-1] = ye
+
         def core(x, s, H, W, xe, xm):
             sgn= math.copysign(1,x)
             x = math.fabs(x)
@@ -368,7 +376,7 @@ class disop: #Distribution optimization including bc expansion method
                         np.delete(xarr,i)
                     else:
                         x_new = core(x,s,H,Wx,xe,xm)
-                        if math.fabs(x_new - x) < dx/3:
+                        if math.fabs(x_new - x) < dx/2:
                             np.delete(xarr,i)
                             x_ex.append(xe)
                         else:
@@ -406,12 +414,12 @@ class disop: #Distribution optimization including bc expansion method
         return np.array([[[x,y] for x in x_arr_ex] for y in y_arr_ex])
 
     @classmethod
-    def solve_system(cls, s, W, H, n_nnls = 0, method="linear"): #linear, nnls
+    def solve_system(cls, s, W, H, k = 0, n_nnls = 0, method="linear"): #linear, nnls
 
         def solve_discretized(n, s, W, H, getfd=False):
             d= W/n
             F = np.fromfunction(lambda i, j: utils.intensity_function(s, H, d*i, d*j), (n,n), dtype=float)
-            delta = np.linalg.solve(F, np.ones(n), assume_a='pos')
+            delta = np.linalg.solve(F, np.ones(n))
             if getfd:
                 return delta, F
             return delta.min()
@@ -437,6 +445,7 @@ class disop: #Distribution optimization including bc expansion method
                     else:
                         n+=1
                         state=2
+            n = n-k
             d= W/n
             delta, F = solve_discretized(n, s, W, H, getfd=True)
 
