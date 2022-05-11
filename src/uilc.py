@@ -497,6 +497,8 @@ class disop: #Distribution optimization including bc expansion method
         return sol_xarr
 
 
+
+
 # For practical application in General situation like in Optical Design programs.
 # Not Yet complited
 class LED: #Lambertian model 
