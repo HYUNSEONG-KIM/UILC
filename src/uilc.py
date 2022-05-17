@@ -452,14 +452,19 @@ class disop: #Distribution optimization including bc expansion method
             position =np.array([-W/2+d/2+(i-1)*d for i in range(1,n+1)])
 
             return delta, position, F
+
         if method == "nnls":
             d= W/n_nnls
             F = np.fromfunction(lambda i, j: utils.intensity_function(s, H, d*i, d*j), (n_nnls,n_nnls), dtype=float)
             delta = op.nnls(F,np.ones(n_nnls))[0]
             position =np.array([-W/2+d/2+(i-1)*d for i in range(1,n_nnls+1)])
 
-            position = position[np.argwhere(delta>2*delta.mean())[0:,0]]
-            delta = delta[delta > 2* delta.mean()]
+            #Get meaningful points
+
+            therhold = 0.01 * delta.max()
+            #therhold = 2* delta.mean()
+            position = position[np.argwhere(delta>therhold )[0:,0]]
+            delta = delta[delta > therhold ]
 
             return delta, position, F
     @classmethod
