@@ -1,8 +1,13 @@
 # UILC
 
+**U**niform **I**llumination **L**ight **C**alcuation
+
 ## About The Project
 
-Uniform irradiation light sources are widely used in many industrial and research fields. This project is a python implementation of finding LED locations of array that produces unifrom irradiation on target plane.
+Uniform irradiation light sources are widely used in many industrial and research fields. This project is a python implementation of finding LED locations of array that produces unifrom irradiation on the target plane.
+
+Theorical backgtrounds and further reading sources are written in `theories.ipynb` file in `/docs` directory.
+
 
 ### Language and library dependencies
 
