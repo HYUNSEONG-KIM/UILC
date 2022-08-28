@@ -272,7 +272,7 @@ class esc: #Expanded Sparrow Criterion
 
         return n
 class disop: #Distribution optimization including bc expansion method
-    def __init__(self):
+    def __init__(self, s, W, H):
         pass
     @classmethod
     def D(cls, d, alpha, s): #Done
@@ -414,7 +414,7 @@ class disop: #Distribution optimization including bc expansion method
         return np.array([[[x,y] for x in x_arr_ex] for y in y_arr_ex])
 
     @classmethod
-    def solve_system(cls, s, W, H, k = 0, n_nnls = 0, method="linear"): #linear, nnls
+    def solve_system(cls, s, W, H, k = 0, n_nnls = 0, method="linear", mean=True): #linear, nnls
 
         def solve_discretized(n, s, W, H, getfd=False):
             d= W/n
@@ -430,7 +430,7 @@ class disop: #Distribution optimization including bc expansion method
             state = 0
             termination = False
 
-            while(termination == False):
+            while(not termination):
                 minvalue = solve_discretized(n, s, W, H)
                 if minvalue <0:
                     if state ==2:
@@ -460,11 +460,11 @@ class disop: #Distribution optimization including bc expansion method
             position =np.array([-W/2+d/2+(i-1)*d for i in range(1,n_nnls+1)])
 
             #Get meaningful points
-
-            therhold = 0.01 * delta.max()
-            #therhold = 2* delta.mean()
-            position = position[np.argwhere(delta>therhold )[0:,0]]
-            delta = delta[delta > therhold ]
+            if mean:
+                therhold = 0.01 * delta.max()
+                #therhold = 2* delta.mean()
+                position = position[np.argwhere(delta>therhold )[0:,0]]
+                delta = delta[delta > therhold ]
 
             return delta, position, F
     @classmethod
