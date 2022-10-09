@@ -183,7 +183,7 @@ class utils: # basic Utils and functions including mathematical routines
         return (ydata - utils.gauss_distribution(xdata, np.array([[[0]]]), location,h))[0][0]
 
 
-class esc: #Expanded Sparrow Criterion
+class ESC: #Expanded Sparrow Criterion
     def __init__(self):
         pass
 
@@ -271,7 +271,7 @@ class esc: #Expanded Sparrow Criterion
         n = n1 if di1 < di2 else n2
 
         return n
-class disop: #Distribution optimization including bc expansion method
+class DISOP: #Distribution optimization including bc expansion method
     def __init__(self, s, W, H):
         pass
     @classmethod
@@ -308,12 +308,12 @@ class disop: #Distribution optimization including bc expansion method
     @classmethod
     def get_n_esc_max(cls, s, H, xm, xe, status = 0): #Done, status: 0 fill Q region including P, 1: only Q
         n =2
-        d = esc.coefficient(s, n)*H
+        d = ESC.coefficient(s, n)*H
         nxe = (n-1)/2 *d
         nxm = d/2 if n%2 ==0 else d
         while((nxe < xe-d/2)):
             n += 1
-            d = esc.coefficient(s, n)*H
+            d = ESC.coefficient(s, n)*H
             nxe = (n-1)/2 *d
             nxm = d/2 if n%2 ==0 else d
             if status ==1 and nxm > xm:
@@ -321,10 +321,10 @@ class disop: #Distribution optimization including bc expansion method
             
         if nxe > xe and n > 2:
                 n1 = n-1
-                d1 =  esc.coefficient(s, n1)*H
+                d1 =  ESC.coefficient(s, n1)*H
                 nxe1 = (n1-1)/2 *d1
                 n2 = n-2
-                d2 = esc.coefficient(s, n2)*H
+                d2 = ESC.coefficient(s, n2)*H
                 nxe2 = (n2-1)/2 *d2
                 di1 = xe - nxe1
                 di2 = xe - nxe2
@@ -414,8 +414,7 @@ class disop: #Distribution optimization including bc expansion method
         return np.array([[[x,y] for x in x_arr_ex] for y in y_arr_ex])
 
     @classmethod
-    def solve_system(cls, s, W, H, k = 0, n_nnls = 0, method="linear", mean=True): #linear, nnls
-
+    def solve_linear(cls, s, W, H, n_pre=False, k =0):
         def solve_discretized(n, s, W, H, getfd=False):
             d= W/n
             F = np.fromfunction(lambda i, j: utils.intensity_function(s, H, d*i, d*j), (n,n), dtype=float)
@@ -423,13 +422,14 @@ class disop: #Distribution optimization including bc expansion method
             if getfd:
                 return delta, F
             return delta.min()
-        
-        if method == "linear":
+
+        if n_pre:
+            n = n_pre
+        else:
             napp = 3/ utils.hyper2F1(1/2, (s+2)/2, 3/2, - (W/(2*H))**2)
             n = math.floor(napp)
             state = 0
             termination = False
-
             while(not termination):
                 minvalue = solve_discretized(n, s, W, H)
                 if minvalue <0:
@@ -446,27 +446,25 @@ class disop: #Distribution optimization including bc expansion method
                         n+=1
                         state=2
             n = n-k
-            d= W/n
-            delta, F = solve_discretized(n, s, W, H, getfd=True)
+        
+        d= W/n
+        delta, F = solve_discretized(n, s, W, H, getfd=True)
+        position =np.array([-W/2+d/2+(i-1)*d for i in range(1,n+1)])
+        return delta, position, F
 
-            position =np.array([-W/2+d/2+(i-1)*d for i in range(1,n+1)])
-
-            return delta, position, F
-
-        if method == "nnls":
-            d= W/n_nnls
-            F = np.fromfunction(lambda i, j: utils.intensity_function(s, H, d*i, d*j), (n_nnls,n_nnls), dtype=float)
-            delta = op.nnls(F,np.ones(n_nnls))[0]
-            position =np.array([-W/2+d/2+(i-1)*d for i in range(1,n_nnls+1)])
-
-            #Get meaningful points
-            if mean:
-                therhold = 0.01 * delta.max()
-                #therhold = 2* delta.mean()
-                position = position[np.argwhere(delta>therhold )[0:,0]]
-                delta = delta[delta > therhold ]
-
-            return delta, position, F
+    @classmethod
+    def solve_nnls(cls, s, W, H, n_nnls = 1, mean=True): #linear, nnls
+        d= W/n_nnls
+        F = np.fromfunction(lambda i, j: utils.intensity_function(s, H, d*i, d*j), (n_nnls,n_nnls), dtype=float)
+        delta = op.nnls(F,np.ones(n_nnls))[0]
+        position =np.array([-W/2+d/2+(i-1)*d for i in range(1,n_nnls+1)])
+        #Get meaningful points
+        if mean:
+            therhold = 0.01 * delta.max()
+            #therhold = 2* delta.mean()
+            position = position[np.argwhere(delta>therhold )[0:,0]]
+            delta = delta[delta > therhold ]
+        return delta, position, F
     @classmethod
     def nomarlization_lq(cls, arr, xdata, ydata, n, h=False, W=False):
         d, w, m = utils.ls_loc_to_diff(utils.get_axis_list(arr), n)
@@ -501,59 +499,3 @@ class disop: #Distribution optimization including bc expansion method
             return False
         return sol_xarr
 
-
-
-
-# For practical application in General situation like in Optical Design programs.
-# Not Yet complited
-class LED: #Lambertian model 
-    def __init__(self, I, s ,location): # s: characteristic value of irradiation, I: intensity at 1m distance, location: (x,y,z) numpy 1dim array
-        if isinstance(I, (int, float)) and isinstance(s, (int,float)):
-            if I>0 and s>1.0 :
-                pass
-            else:
-                raise ValueError("")
-        else:
-            raise ValueError("The argument 'I' and 's' must be numerical type int, float:\n I={}, s ={}".format(type(I),type(s)))
-
-        #location variable check
-        if not hasattr(location, "__len__"):
-            raise ValueError("The led location must be array-like objects.\n location variable type:{}".format(type(location)))
-        elif len(location) !=3:
-            raise ValueError("The array size must be 3.\n ndarray size:{}".format(len(location)))
-        elif not isinstance(location[0],(int,float,np.integer)):
-            raise ValueError("The vector type must be numerical type float or int.\n ndarray type:{}, element type:{}".format(location.dtype,type(location[0])))
-        self.I = I
-        self.s = s
-        self.location = location if isinstance(location, np.ndarray) else np.array(location)
-    
-    def intensity(self, target): #target: (x,y,z) target point vector
-        # Value checker
-        if not hasattr(target, "__len__"):
-            raise ValueError("The led location must be array-like objects.\n location variable type:{}".format(type(target)))
-        elif len(target) !=3:
-            raise ValueError("The array size must be 3.\n ndarray size:{}".format(len(target)))
-        elif not isinstance(target[0],(int,float,np.integer)):
-            raise ValueError("The vector type must be numerical type float or int.\n ndarray type:{}, element type:{}".format(target.dtype,type(target[0])))
-        d = target if isinstance(target, np.ndarray) else np.array(target) - self.location
-        r2 = np.dot(d,d)
-        dsize = math.sqrt(r2)
-        cos = np.dot(d, np.array([0,0,1]) /dsize)
-        return self.I/r2 * math.pow(cos, self.s)
-    
-
-class LEDarray:
-    def __init__(self, s, I0, array):
-        self.array = array
-        self.N = array.shape[1]
-        self.M = array.shape[0]
-        self.s = s
-        self.I0 = I0
-    @classmethod
-    def fromAxisArray(cls, s, I0, xarray, yarray=np.array([0.0])):
-        array = np.array([[[i, j] for i in xarray] for j in yarray])
-        return cls(s, I0, array)
-    def ledcoordinate(self, i, j):
-        return self.array[j,i]
-
-    
