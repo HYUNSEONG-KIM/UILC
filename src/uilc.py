@@ -13,9 +13,8 @@
 
 import numpy as np
 import math
-from scipy import special as sp
 from scipy import optimize as op
-from hypergeo import hyper2F1
+from .hypergeo import hyper2F1
 
 EPS = np.finfo(float).eps *1000
 
@@ -128,8 +127,6 @@ class Utils: # basic Utils and functions including mathematical routines
         location = np.array([[[x, 0] for x in xi]])
 
         return (ydata - Utils.gauss_distribution(xdata, np.array([[[0]]]), location,h))[0][0]
-
-
 class ESC: #Expanded Sparrow Criterion
     def __init__(self):
         pass
@@ -372,7 +369,7 @@ class DISOP: #Distribution optimization including bc expansion method
         if n_pre:
             n = n_pre
         else:
-            napp = 3/ Utils.hyper2F1(1/2, (s+2)/2, 3/2, - (W/(2*H))**2)
+            napp = 3/ hyper2F1(1/2, (s+2)/2, 3/2, - (W/(2*H))**2)
             n = math.floor(napp)
             state = 0
             termination = False
