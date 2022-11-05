@@ -15,15 +15,13 @@ import numpy as np
 import math
 from scipy import special as sp
 from scipy import optimize as op
+from hypergeo import hyper2F1
 
 EPS = np.finfo(float).eps *1000
 
 
-class utils: # basic Utils and functions including mathematical routines
-    def __init__(self):
-        pass
-    @classmethod
-    def uniformarray(cls, dx, N, dy=0.0, M=1, diff = False): #return uniformly distributed array of which distance between elements is 'd'
+class Utils: # basic Utils and functions including mathematical routines
+    def uniformarray(dx, N, dy=0.0, M=1, diff = False): #return uniformly distributed array of which distance between elements is 'd'
         indexing = np.array([[[(i-(N-1)/2), j-(M-1)/2] for i in range(0,N)] for j in range(0,M)])
         if diff:
             for i in range(0,N):
@@ -32,8 +30,7 @@ class utils: # basic Utils and functions including mathematical routines
             return indexing
         else:
             return np.multiply(indexing, dx)
-    @classmethod
-    def get_axis_list(cls, arr, axis="x"): 
+    def get_axis_list(arr, axis="x"): 
         shape = arr.shape
         N = shape[1]
         M = shape[0]
@@ -43,57 +40,15 @@ class utils: # basic Utils and functions including mathematical routines
             return arr[0:M,0][0:M,1]
         else:
             raise ValueError("axis argument must be 'x' or 'y, current={}".format(axis))
-    @classmethod
-    def get_2d_array(cls, xarr, yarr, dim= 1):
+    def get_2d_array(xarr, yarr, dim= 1):
         if dim ==2:
-            xarr = cls.get_axis_list(xarr)
-            yarr = cls.get_axis_list(yarr)
+            xarr = Utils.get_axis_list(xarr)
+            yarr = Utils.get_axis_list(yarr)
 
         return  np.flip(np.array(np.meshgrid(xarr,yarr)).transpose(), axis=None)
-    @classmethod
-    def getlocation(cls, i, j, array): # (x-order, y-order) conversion for matrix row, column order indexing.
+    def getlocation(i, j, array): # (x-order, y-order) conversion for matrix row, column order indexing.
         return array[j,i]
-    @classmethod
-    def hyper2F1(cls, a,b,c,z): # Calculate Gausse Hypergeometric function expanding 
-        if z> 1:
-            raise ValueError("z<=1 z= {}".format(z))
-        if z == 1 or math.isclose(z, 1.0, rel_tol=np.finfo(float).eps):
-            if c>a+b:
-                return sp.gamma(c) * sp.gamma(c-(a+b))/ (sp.gamma(c-a) * sp.gamma(c-b))
-            else:
-                raise ValueError("if z=1, c must be larger than a+b, c:{}, a+b:{}".format(c, a+b))
-        if -1<= z:
-            return sp.hyp2f1(a,b,c,z)
-        if z< -1:
-
-            ab_abs = math.fabs(a-b)
-            ab_int = int(ab_abs)
-
-            if (ab_abs - ab_int) < EPS:
-                return (1-z)**(-a) * sp.hyp2f1(a, c-b, c ,z/(z-1))
-                # same with '(1-z)**(-b)*sp.hyp2f1(c-a, b, c, z/(z-1))'
-                # raise ValueError("a-b must not be in Z, |a-b|:{}".format(a-b))
-
-            if c-a <0:
-                    ca_abs = math.fabs(c-a)
-                    ca_int = int(ca_abs)
-                    if math.fabs(ca_abs - ca_int) < EPS:
-                        raise ValueError("c-a and c-b must not be negative integer c-a: {}, c-b:{}".format(c-a, c-b ))
-            if c-b <0:
-                cb_abs = math.fabs(c-b)
-                cb_int = int(cb_abs)
-                if math.fabs(cb_abs - cb_int) < EPS:
-                    raise ValueError("c-a and c-b must not be negative integer c-a: {}, c-b:{}".format(c-a, c-b ))
-
-            w = 1/(1-z)
-
-            c1 = w**a * (sp.gamma(c)*sp.gamma(b-a)/sp.gamma(b) * sp.gamma(c-a))
-            c2 = w**b *(sp.gamma(c) * sp.gamma(a-b)/(sp.gamma(a) * sp.gamma(c-b)))
-
-            return c1 *sp.hyp2f1(a, c-b, a-b+1, w) + c2* sp.hyp2f1(b, c-a, b-a+1, w) 
-
-    @classmethod
-    def gauss_distribution(cls, x, y, arr, h): #approximating Dirac Delta function
+    def gauss_distribution(x, y, arr, h): #approximating Dirac Delta function
         M = arr.shape[0]
         N = arr.shape[1]
         result = 0.0
@@ -102,8 +57,7 @@ class utils: # basic Utils and functions including mathematical routines
                 d = (x-arr[j,i][0])**2 + (y - arr[j,i][1])**2
                 result += (1/(math.fabs(h)*np.sqrt(2*math.pi)))*np.exp(-d/(2*h**2))
         return result
-    @classmethod
-    def dirac(cls, x, y, arr):
+    def dirac(x, y, arr):
         M = arr.shape[0]
         N = arr.shape[1]
         result = 0.0
@@ -112,11 +66,9 @@ class utils: # basic Utils and functions including mathematical routines
                 d = 1 if (x-arr[j,i][0])**2 < EPS and (y - arr[j,i][1])**2 < EPS else 0
                 result += d
         return result
-    @classmethod
-    def intensity_function(cls, s, h, x, t):
+    def intensity_function(s, h, x, t):
         return h**s/(h**2 + (x-t)**2)**(s/2+1)
-    @classmethod
-    def lambertian_distribution(cls, x, y, arr, s, h):
+    def lambertian_distribution(x, y, arr, s, h):
         M = arr.shape[0]
         N = arr.shape[1]
         result =0.0
@@ -126,30 +78,26 @@ class utils: # basic Utils and functions including mathematical routines
 
                 result += h**s / (h**2 + d)**(s/2 +1)
         return result
-    @classmethod 
-    def evaluation_factors(cls,arr):
+    def evaluation_factors(arr):
         stdE = (arr.max() - arr.min())/arr.mean() # |E_max -E_min|/E_mean
         rmse = (arr.std())/arr.mean() # std/mean
         return stdE, rmse
 #=============================================================================================================================================
-    @classmethod
-    def ls_transformMatrix(cls, n):
+    def ls_transformMatrix(n):
         Fd = np.array([[1 if i == j else (-1 if i-j == 1 else 0) for j in range(0,n)] for i in range(0,n)])
         inFd =  np.array([[1 if i >= j else (0) for j in range(0,n)] for i in range(0,n)])
 
         return Fd, inFd
-    @classmethod
-    def ls_loc_to_diff(cls, x, n):
-        fd, infd = cls.ls_transformMatrix(n)
+    def ls_loc_to_diff(x, n):
+        fd, infd = Utils.ls_transformMatrix(n)
         d= fd.dot(x)
         w= -2*d[0]
         d0 = d[1:]
         m = math.floor(n/2) if n%2 == 0 else math.floor((n-1)/2)
         #print(m)
         return d0[0:m], w, m
-    @classmethod
-    def ls_diff_to_loc(cls, diff, n, w):
-        fd , infd = cls.ls_transformMatrix(n)
+    def ls_diff_to_loc(diff, n, w):
+        fd , infd = Utils.ls_transformMatrix(n)
 
         if n%2 ==0:
             m = n/2
@@ -159,15 +107,14 @@ class utils: # basic Utils and functions including mathematical routines
             d= np.append(diff, np.flip(diff))
         np.insert(d, 0, -w/2)
         return infd.dot(d)
-    @classmethod
-    def ls_f_residual(cls, d, **kwargs):
+    def ls_f_residual(d, **kwargs):
         W = kwargs["W"]
         h = kwargs["h"]
         n = kwargs["n"]
         xdata = kwargs["xdata"]
         ydata = kwargs["ydata"]
         m = d.size
-        fd, infd = utils.ls_transformMatrix(n)
+        fd, infd = Utils.ls_transformMatrix(n)
 
         if n%2 ==0:
             d0 = np.append(d[0:m], np.flip(d[0:m-1]))
@@ -180,13 +127,12 @@ class utils: # basic Utils and functions including mathematical routines
 
         location = np.array([[[x, 0] for x in xi]])
 
-        return (ydata - utils.gauss_distribution(xdata, np.array([[[0]]]), location,h))[0][0]
+        return (ydata - Utils.gauss_distribution(xdata, np.array([[[0]]]), location,h))[0][0]
 
 
 class ESC: #Expanded Sparrow Criterion
     def __init__(self):
         pass
-
     @classmethod
     def coefficient(cls, s, N, M=1, shape = "L" ,approx=False):
 
@@ -248,21 +194,21 @@ class ESC: #Expanded Sparrow Criterion
     def get_nmax(cls, s, W, H):
         xlim = W/2
         n = 2
-        d = esc.coefficient(s, n)*H
+        d = cls.coefficient(s, n)*H
         nxe = (n-1)/2 *d
 
         while((nxe < xlim)):
             n += 1
-            d = esc.coefficient(s, n)*H
+            d = cls.coefficient(s, n)*H
             nxe = (n-1)/2 *d
             nxm = d/2 if n%2 ==0 else d
 
         n1 = n-1
-        d1 =  esc.coefficient(s, n1)*H
+        d1 =  cls.coefficient(s, n1)*H
         nxe1 = (n1-1)/2 *d1
         
         n2 = n-2
-        d2 = esc.coefficient(s, n2)*H
+        d2 = cls.coefficient(s, n2)*H
         nxe2 = (n2-1)/2 *d2
         
         di1 = xlim - nxe1
@@ -306,7 +252,7 @@ class DISOP: #Distribution optimization including bc expansion method
     def Di(cls, s, I0, x, W, H): # same with (I0/H^2 )*D(x/H, W/H, s)
         return I0/(H)**2 *cls.D(x/H, W/H, s)
     @classmethod
-    def get_n_esc_max(cls, s, H, xm, xe, status = 0): #Done, status: 0 fill Q region including P, 1: only Q
+    def get_n_ESC_max(cls, s, H, xm, xe, status = 0): #Done, status: 0 fill Q region including P, 1: only Q
         n =2
         d = ESC.coefficient(s, n)*H
         nxe = (n-1)/2 *d
@@ -334,13 +280,13 @@ class DISOP: #Distribution optimization including bc expansion method
 
 #=============================================================================================
     @classmethod
-    def get_bc_expansion(cls, esc_arr, s, H, Wx, xe, xm, Wy=0.0, ye=0.0, ym=0.0, axis=0): # axis: (0=x), (1=y), (2= x, y all)
-        shape = esc_arr.shape
+    def get_bc_expansion(cls, ESC_arr, s, H, Wx, xe, xm, Wy=0.0, ye=0.0, ym=0.0, axis=0): # axis: (0=x), (1=y), (2= x, y all)
+        shape = ESC_arr.shape
         N = shape[1]
         M = shape[0]
 
-        xarr = np.unique(utils.get_axis_list(esc_arr, axis="x"))
-        yarr = np.unique(utils.get_axis_list(esc_arr, axis="y"))
+        xarr = np.unique(Utils.get_axis_list(ESC_arr, axis="x"))
+        yarr = np.unique(Utils.get_axis_list(ESC_arr, axis="y"))
 
         dx = xarr[1] - xarr[0]
         dy = yarr[1] - yarr[0] if M > 1 else 0
@@ -417,7 +363,7 @@ class DISOP: #Distribution optimization including bc expansion method
     def solve_linear(cls, s, W, H, n_pre=False, k =0):
         def solve_discretized(n, s, W, H, getfd=False):
             d= W/n
-            F = np.fromfunction(lambda i, j: utils.intensity_function(s, H, d*i, d*j), (n,n), dtype=float)
+            F = np.fromfunction(lambda i, j: Utils.intensity_function(s, H, d*i, d*j), (n,n), dtype=float)
             delta = np.linalg.solve(F, np.ones(n))
             if getfd:
                 return delta, F
@@ -426,7 +372,7 @@ class DISOP: #Distribution optimization including bc expansion method
         if n_pre:
             n = n_pre
         else:
-            napp = 3/ utils.hyper2F1(1/2, (s+2)/2, 3/2, - (W/(2*H))**2)
+            napp = 3/ Utils.hyper2F1(1/2, (s+2)/2, 3/2, - (W/(2*H))**2)
             n = math.floor(napp)
             state = 0
             termination = False
@@ -455,7 +401,7 @@ class DISOP: #Distribution optimization including bc expansion method
     @classmethod
     def solve_nnls(cls, s, W, H, n_nnls = 1, mean=True): #linear, nnls
         d= W/n_nnls
-        F = np.fromfunction(lambda i, j: utils.intensity_function(s, H, d*i, d*j), (n_nnls,n_nnls), dtype=float)
+        F = np.fromfunction(lambda i, j: Utils.intensity_function(s, H, d*i, d*j), (n_nnls,n_nnls), dtype=float)
         delta = op.nnls(F,np.ones(n_nnls))[0]
         position =np.array([-W/2+d/2+(i-1)*d for i in range(1,n_nnls+1)])
         #Get meaningful points
@@ -467,8 +413,8 @@ class DISOP: #Distribution optimization including bc expansion method
         return delta, position, F
     @classmethod
     def nomarlization_lq(cls, arr, xdata, ydata, n, h=False, W=False):
-        d, w, m = utils.ls_loc_to_diff(utils.get_axis_list(arr), n)
-        fd, infd = utils.ls_transformMatrix(n)
+        d, w, m = Utils.ls_loc_to_diff(Utils.get_axis_list(arr), n)
+        fd, infd = Utils.ls_transformMatrix(n)
         if h == False:
             h =  w/(1.8*n)
         if W == False:
@@ -482,7 +428,7 @@ class DISOP: #Distribution optimization including bc expansion method
                  }
         bc_x0 = d
 
-        sol = op.least_squares(utils.ls_f_residual, x0 =bc_x0, kwargs=kwargs)
+        sol = op.least_squares(Utils.ls_f_residual, x0 =bc_x0, kwargs=kwargs)
         if sol.status >=1:
             
             if n%2 ==0:
