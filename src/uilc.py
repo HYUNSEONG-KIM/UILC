@@ -367,7 +367,7 @@ class DISOP: #Distribution optimization including bc expansion method
             return delta.min()
 
         if n_pre:
-            n = n_pre
+            n = int(n_pre)
         else:
             napp = 3/ hyper2F1(1/2, (s+2)/2, 3/2, - (W/(2*H))**2)
             n = math.floor(napp)
