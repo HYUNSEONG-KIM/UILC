@@ -11,6 +11,10 @@
 # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR 
 # THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#
+#
+#
+
 import numpy as np
 import math
 from scipy import optimize as op
@@ -23,22 +27,33 @@ class Radiation:
         return h**s/(h**2 + (x-t)**2)**(s/2+1)
     def gaussian(s, h, x, t):
         return (1/(h**2 + (t-x)**2))*np.exp(- s*((t-x)/h)**2)
+    def gauss_tan(s, h, x, t):
+        return (1/(h**2 + (t-x)**2))*np.exp(- s*(np.tan(np.abs(t-x)/h)**2))
 
 class Array(np.ndarray):
+    def csym_index(N):
+        return np.array([(i-(N-1)/2)] for i in range(0, N))
+    #-------------------------------------------------
     @classmethod
-    def uniform(cls, d, N):
-        d = tuple(d)
-        N = tuple(N)
-        same = False
+    def from_arrays(cls, xarr, yarr=np.array([0.])):
+        xarr = np.array(xarr)
+        yarr = np.array(yarr)[::-1]
 
-        if len(tuple(d)) == 1:
-            dx = dy =d[0]
-        else:
-            dx, dy = d
-            same = True
+        if len(xarr.shape) != 1 or len(yarr.shape) != 1:
+            raise ValueError("The given arrays, xarr and yarr, must be 1 dim array.")
+        return cls(np.flip(np.array(np.meshgrid(xarr,yarr)).transpose(), axis=None))
+    @classmethod
+    def uniform(cls, d_t, N_t):
+        d_t = tuple(d_t)
+        N_t = list(N_t)
+
+        if len(d_t) == 1:
+            dx = dy =d_t[0]
+        elif len(d_t) == 2:
+            dx, dy = d_t
         
-        if len(N) == 1:
-            N = M = N[0]
+        if len(N_t) == 1:
+            N = M = N_t[0]
         else:
             N, M = N
             N = int(N)
@@ -49,19 +64,17 @@ class Array(np.ndarray):
         if math.isclose(dx, 0., abs_tol =  EPS):
             return None
         
-        indexing = cls([[[(i-(N-1)/2), j-(M-1)/2] for i in range(0,N)] for j in range(0,M)])
-        if same:
-            result = np.multiply(indexing, dx)
-        else:
-            result = indexing
-            for i in range(0,N):
-                result[0:M,i][0:M,0] *= dx
-                result[0:M,i][0:M,1] *= dy
-        return result
-    @classmethod
-    def 
-    def get_axis_list(self, axis="x"): 
+        xarr = dx*np.array([(i-(N-1)/2)] for i in range(0, N))
+        yarr = dy*np.array([(j-(M-1)/2)] for j in range(0, M))
+        
+        #indexing = cls([[[(i-(N-1)/2), j-(M-1)/2] for i in range(0,N)] for j in range(0,M)])
+
+        return cls.from_arrays(xarr, yarr) 
+    #---------------------------------------------------
+    def get_axis_list(self, axis="x"):
         shape = self.shape
+        if len(shape) != 3 or len(shape) == 3 and len(self[0][0]) !=2 :
+            raise ValueError("Not a 2 dimensional array of tuple.")
         N = shape[1]
         M = shape[0]
         if axis == "x" or axis == 0:
@@ -70,7 +83,10 @@ class Array(np.ndarray):
             return self[0:M,0][0:M,1]
         else:
             raise ValueError("axis argument must be 'x', 0 or 'y, 1 current={}".format(axis))
-    
+    def intensity_on(self, plane_points):
+        pass
+        return ""
+
 class Utils: # basic Utils and functions including mathematical routines
     def uniformarray(dx, N, dy=0.0, M=1, diff = False): #return uniformly distributed array of which distance between elements is 'd'
         indexing = np.array([[[(i-(N-1)/2), j-(M-1)/2] for i in range(0,N)] for j in range(0,M)])
@@ -127,8 +143,6 @@ class Utils: # basic Utils and functions including mathematical routines
 
                 result += h**s / (h**2 + d)**(s/2 +1)
         return result
-    
-
 
     def evaluation_factors(arr):
         stdE = (arr.max() - arr.min())/arr.mean() # |E_max -E_min|/E_mean
@@ -181,11 +195,7 @@ class Utils: # basic Utils and functions including mathematical routines
 
         return (ydata - Utils.gauss_distribution(xdata, np.array([[[0]]]), location,h))[0][0]
 class ESC: #Expanded Sparrow Criterion
-    def __init__(self):
-        pass
-    @classmethod
-    def coefficient(cls, s, N, M=1, shape = "L" ,approx=False):
-
+    def coefficient(s, N, M=1, shape = "L" ,approx=False):
         #Value check : s>= 1.0, N, M are natural numbers, shape ="L" or "R"
         if not isinstance(s,(float, int)) or not isinstance(N, int) or not isinstance(M, int):
             message = 'Check the types of arguments s = int or float >=1, N and M = int>0 \n Current types are s={}, N ={}, M={}'.format(type(s), type(N), type(M))
@@ -236,73 +246,80 @@ class ESC: #Expanded Sparrow Criterion
             except:
                 res = op.minimize_scalar(lambda D: rectangularfunction(D, N, M), bounds=(0,1), method = "bounded")
                 return res.x
-        
-        
-        raise ValueError("\"shape\" argument must be \"L\" or \"R\" current value is {}".format(shape))
 
-    @classmethod
-    def get_nmax(cls, s, W, H):
+        raise ValueError("\"shape\" argument must be \"L\" or \"R\" current value is {}".format(shape))
+    def get_nmax(s, W, H):
+
         xlim = W/2
         n = 2
-        d = cls.coefficient(s, n)*H
+        d = ESC.coefficient(s, n)*H
         nxe = (n-1)/2 *d
 
-        while((nxe < xlim)):
+        while((nxe < xlim)): # find critical 'n' fill the given region.
             n += 1
-            d = cls.coefficient(s, n)*H
+            d = ESC.coefficient(s, n)*H
             nxe = (n-1)/2 *d
             nxm = d/2 if n%2 ==0 else d
-
+        
+        n_o = n
+        # For odd and even n, their order by requiring area can be reversed.
         n1 = n-1
-        d1 =  cls.coefficient(s, n1)*H
-        nxe1 = (n1-1)/2 *d1
+        d1 =  ESC.coefficient(s, n1)*H
+        n1_area = (n1-1)/2 *d1
         
         n2 = n-2
-        d2 = cls.coefficient(s, n2)*H
-        nxe2 = (n2-1)/2 *d2
+        d2 = ESC.coefficient(s, n2)*H
+        n2_area = (n2-1)/2 *d2
         
-        di1 = xlim - nxe1
-        di2 = xlim - nxe2
+        n1_residual = xlim - n1_area
+        n2_residual = xlim - n2_area
 
-        n = n1 if di1 < di2 else n2
+        n_residual = n1_residual/2 if n1_residual < n2_residual else n2_residual/2
+        n = n1 if n1_residual < n2_residual else n2
 
+        n_o_residual = math.fabs(nxe - xlim)/2 
+        if n_o_residual < d:
+            n = n if n_residual < n_o_residual else n_o
         return n
-class DISOP: #Distribution optimization including bc expansion method
-    def __init__(self, s, W, H):
-        pass
-    @classmethod
-    def D(cls, d, alpha, s): #Done
+    
+    def array(s, N, M=1, shpae="L", approx=False):
+        d = ESC.coefficient(s, N, M, shpae, approx)
+        xarr = d* Array.csym_index(N)
+        yarr = d* Array.csym_index(M)
+        return Array.from_arrays(xarr, yarr)
+
+class OP: #Distribution optimization including bc expansion method
+    def D(d, alpha, s): #Done
         return (1+ (0.5*alpha+d)**2)**(-s/2 -1) + (1+ (0.5*alpha-d)**2)**(-s/2-1) - 2*((1+d**2)**(-s/2-1))
-    @classmethod
-    def find_de(cls, alpha, s, approx=False): #Done
+    def Di(x, s, I0, W, H): # same with (I0/H^2 )*D(x/H, W/H, s)
+        return I0/(H)**2 *OP.D(x/H, W/H, s)
+    #--------------------------------------------------------
+    def de(alpha, s, approx=False): #Done
         app = 0.25*alpha +  math.sqrt(2**(2/(s+2)) -1)/6
         if approx:
             return app
         else:
-            r = op.root_scalar(lambda d: cls.D(d, alpha, s), x0 = app, bracket =[0, alpha/2], method = "brentq")
+            r = op.root_scalar(lambda d: OP.D(d, alpha, s), x0 = app, bracket =[0, alpha/2], method = "brentq")
             return r.root
-    @classmethod
-    def find_dm(cls, alpha, s, de, approx=False): #Done
+    def dm(alpha, s, de, approx=False): #Done
         app = math.sqrt(2**(2/(s+2))-1)
         if approx:
             return app
         else:
-            r = op.root_scalar( lambda d: cls.D(d, alpha, s) + cls.D(alpha/2, alpha, s), x0 = app, bracket=[0,de], method="brentq")
+            r = op.root_scalar( lambda d: OP.D(d, alpha, s) + OP.D(alpha/2, alpha, s), x0 = app, bracket=[0,de], method="brentq")
             return r.root
-    @classmethod
-    def find_xe(cls, W, H, s, approx=False): #Done
+    def xe(s, W, H, approx=False): #Done
         alpha = W/H
-        return cls.find_de(alpha, s, approx) *H
-    @classmethod
-    def find_xm(cls, W, H, s, xe, approx=False): #Done
+        return H*OP.de(alpha, s, approx)
+    def xm(s, W, H, xe, approx=False): #Done
+        if xe is None:
+            xe = OP.xe(s, W, H, approx)
         de = xe/H
         alpha = W/H
-        return cls.find_dm(alpha, s, de, approx) *H
-    @classmethod
-    def Di(cls, s, I0, x, W, H): # same with (I0/H^2 )*D(x/H, W/H, s)
-        return I0/(H)**2 *cls.D(x/H, W/H, s)
-    @classmethod
-    def get_n_ESC_max(cls, s, H, xm, xe, status = 0): #Done, status: 0 fill Q region including P, 1: only Q
+        return H * OP.dm(alpha, s, de, approx)
+    
+    #--------------------------------------------------------
+    def _bc_n_esc_max(s, H, xm, xe, status = 0): #Done, status: 0 fill Q region including P, 1: only Q
         n =2
         d = ESC.coefficient(s, n)*H
         nxe = (n-1)/2 *d
@@ -327,16 +344,15 @@ class DISOP: #Distribution optimization including bc expansion method
                 n = n1 if di1 < di2 else n2
 
         return n
-
-#=============================================================================================
+    #--------------------------------------------------------
     @classmethod
-    def get_bc_expansion(cls, ESC_arr, s, H, Wx, xe, xm, Wy=0.0, ye=0.0, ym=0.0, axis=0): # axis: (0=x), (1=y), (2= x, y all)
-        shape = ESC_arr.shape
+    def get_bc_expansion(cls, pq_arr, s, H, Wx, xe, xm, Wy=0.0, ye=0.0, ym=0.0, axis=0): # axis: (0=x), (1=y), (2= x, y all)
+        shape = pq_arr.shape
         N = shape[1]
         M = shape[0]
 
-        xarr = np.unique(Utils.get_axis_list(ESC_arr, axis="x"))
-        yarr = np.unique(Utils.get_axis_list(ESC_arr, axis="y"))
+        xarr = np.unique(Utils.get_axis_list(pq_arr, axis="x"))
+        yarr = np.unique(Utils.get_axis_list(pq_arr, axis="y"))
 
         dx = xarr[1] - xarr[0]
         dy = yarr[1] - yarr[0] if M > 1 else 0
@@ -407,7 +423,7 @@ class DISOP: #Distribution optimization including bc expansion method
         x_arr_ex.sort()
         y_arr_ex.sort()
 
-        return np.array([[[x,y] for x in x_arr_ex] for y in y_arr_ex])
+        return Array.from_arrays(x_arr_ex, y_arr_ex)
 
     @classmethod
     def solve_linear(cls, s, W, H, n_pre=False, k =0):
