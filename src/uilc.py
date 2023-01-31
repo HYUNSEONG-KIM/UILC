@@ -18,7 +18,59 @@ from .hypergeo import hyper2F1
 
 EPS = np.finfo(float).eps *1000
 
+class Radiation:
+    def lambertian(s, h, x, t):
+        return h**s/(h**2 + (x-t)**2)**(s/2+1)
+    def gaussian(s, h, x, t):
+        return (1/(h**2 + (t-x)**2))*np.exp(- s*((t-x)/h)**2)
 
+class Array(np.ndarray):
+    @classmethod
+    def uniform(cls, d, N):
+        d = tuple(d)
+        N = tuple(N)
+        same = False
+
+        if len(tuple(d)) == 1:
+            dx = dy =d[0]
+        else:
+            dx, dy = d
+            same = True
+        
+        if len(N) == 1:
+            N = M = N[0]
+        else:
+            N, M = N
+            N = int(N)
+            M = int(M)
+        
+        if N == 0:
+            return None
+        if math.isclose(dx, 0., abs_tol =  EPS):
+            return None
+        
+        indexing = cls([[[(i-(N-1)/2), j-(M-1)/2] for i in range(0,N)] for j in range(0,M)])
+        if same:
+            result = np.multiply(indexing, dx)
+        else:
+            result = indexing
+            for i in range(0,N):
+                result[0:M,i][0:M,0] *= dx
+                result[0:M,i][0:M,1] *= dy
+        return result
+    @classmethod
+    def 
+    def get_axis_list(self, axis="x"): 
+        shape = self.shape
+        N = shape[1]
+        M = shape[0]
+        if axis == "x" or axis == 0:
+            return self[0,0:N][0:N,0]
+        elif axis == "y" or axis == 1:
+            return self[0:M,0][0:M,1]
+        else:
+            raise ValueError("axis argument must be 'x', 0 or 'y, 1 current={}".format(axis))
+    
 class Utils: # basic Utils and functions including mathematical routines
     def uniformarray(dx, N, dy=0.0, M=1, diff = False): #return uniformly distributed array of which distance between elements is 'd'
         indexing = np.array([[[(i-(N-1)/2), j-(M-1)/2] for i in range(0,N)] for j in range(0,M)])
@@ -39,11 +91,10 @@ class Utils: # basic Utils and functions including mathematical routines
             return arr[0:M,0][0:M,1]
         else:
             raise ValueError("axis argument must be 'x' or 'y, current={}".format(axis))
-    def get_2d_array(xarr, yarr, dim= 1):
+    def get_2d_array(xarr, yarr=np.array([0.]), dim= 1):
         if dim ==2:
             xarr = Utils.get_axis_list(xarr)
             yarr = Utils.get_axis_list(yarr)
-
         return  np.flip(np.array(np.meshgrid(xarr,yarr)).transpose(), axis=None)
     def getlocation(i, j, array): # (x-order, y-order) conversion for matrix row, column order indexing.
         return array[j,i]
@@ -65,8 +116,7 @@ class Utils: # basic Utils and functions including mathematical routines
                 d = 1 if (x-arr[j,i][0])**2 < EPS and (y - arr[j,i][1])**2 < EPS else 0
                 result += d
         return result
-    def intensity_function(s, h, x, t):
-        return h**s/(h**2 + (x-t)**2)**(s/2+1)
+    
     def lambertian_distribution(x, y, arr, s, h):
         M = arr.shape[0]
         N = arr.shape[1]
@@ -77,26 +127,29 @@ class Utils: # basic Utils and functions including mathematical routines
 
                 result += h**s / (h**2 + d)**(s/2 +1)
         return result
+    
+
+
     def evaluation_factors(arr):
         stdE = (arr.max() - arr.min())/arr.mean() # |E_max -E_min|/E_mean
         rmse = (arr.std())/arr.mean() # std/mean
         return stdE, rmse
 #=============================================================================================================================================
-    def ls_transformMatrix(n):
+    def transformMatrix(n):
         Fd = np.array([[1 if i == j else (-1 if i-j == 1 else 0) for j in range(0,n)] for i in range(0,n)])
         inFd =  np.array([[1 if i >= j else (0) for j in range(0,n)] for i in range(0,n)])
 
         return Fd, inFd
-    def ls_loc_to_diff(x, n):
-        fd, infd = Utils.ls_transformMatrix(n)
+    def loc_to_diff(x, n):
+        fd, infd = Utils.transformMatrix(n)
         d= fd.dot(x)
         w= -2*d[0]
         d0 = d[1:]
         m = math.floor(n/2) if n%2 == 0 else math.floor((n-1)/2)
         #print(m)
         return d0[0:m], w, m
-    def ls_diff_to_loc(diff, n, w):
-        fd , infd = Utils.ls_transformMatrix(n)
+    def diff_to_loc(diff, n, w):
+        fd , infd = Utils.transformMatrix(n)
 
         if n%2 ==0:
             m = n/2
@@ -106,14 +159,14 @@ class Utils: # basic Utils and functions including mathematical routines
             d= np.append(diff, np.flip(diff))
         np.insert(d, 0, -w/2)
         return infd.dot(d)
-    def ls_f_residual(d, **kwargs):
+    def f_residual(d, **kwargs):
         W = kwargs["W"]
         h = kwargs["h"]
         n = kwargs["n"]
         xdata = kwargs["xdata"]
         ydata = kwargs["ydata"]
         m = d.size
-        fd, infd = Utils.ls_transformMatrix(n)
+        fd, infd = Utils.transformMatrix(n)
 
         if n%2 ==0:
             d0 = np.append(d[0:m], np.flip(d[0:m-1]))
@@ -410,8 +463,8 @@ class DISOP: #Distribution optimization including bc expansion method
         return delta, position, F
     @classmethod
     def nomarlization_lq(cls, arr, xdata, ydata, n, h=False, W=False):
-        d, w, m = Utils.ls_loc_to_diff(Utils.get_axis_list(arr), n)
-        fd, infd = Utils.ls_transformMatrix(n)
+        d, w, m = Utils.loc_to_diff(Utils.get_axis_list(arr), n)
+        fd, infd = Utils.transformMatrix(n)
         if h == False:
             h =  w/(1.8*n)
         if W == False:
