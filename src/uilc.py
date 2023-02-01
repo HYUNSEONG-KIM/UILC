@@ -346,7 +346,14 @@ class OP: #Distribution optimization including bc expansion method
         return n
     #--------------------------------------------------------
     @classmethod
-    def get_bc_expansion(cls, pq_arr, s, H, Wx, xe, xm, Wy=0.0, ye=0.0, ym=0.0, axis=0): # axis: (0=x), (1=y), (2= x, y all)
+    def get_bc_expansion(
+        pq_arr, 
+        s, 
+        H, 
+        Wx,
+        Wy=0.0,
+        axis=0): # axis: (0=x), (1=y), (2= x, y all)
+
         shape = pq_arr.shape
         N = shape[1]
         M = shape[0]
@@ -356,27 +363,35 @@ class OP: #Distribution optimization including bc expansion method
 
         dx = xarr[1] - xarr[0]
         dy = yarr[1] - yarr[0] if M > 1 else 0
+        
+        xe = OP.xe(s, Wx, H)
+        xm = OP.xm(s, Wx, H, xe)
 
-        if (xe - xarr.max()) < 2*dx/5:
-            xarr[0] = xarr[N-1] = xe
-        if dy != 0 and (ye - yarr.max()) < dy/2:
-            yarr[0] = yarr[N-1] = ye
-
-        def core(x, s, H, W, xe, xm):
+        if (xe - xarr.max()) < 0.4*dx:
+            xarr[0] = xarr[N-1] = xe\
+              
+        if dy != 0:
+            ye = OP.xe(s, Wy, H)
+            ym = OP.ym(s, Wy, H, ye)
+            if (ye - yarr.max()) < dy/2:
+                yarr[0] = yarr[N-1] = ye
+          
+        def R_region(x, s, H, W, xe, xm):
             sgn= math.copysign(1,x)
             x = math.fabs(x)
             if x> W/2 or x<0:
                 raise ValueError("Argument 'x' must be in xm <= x < xe < x <= W/2 ")
             if math.isclose(x, xe, rel_tol = EPS):
-                return xe
+                #return xe
+                return None
             if math.isclose(x, W/2, rel_tol=EPS) and x<W/2:
                 return xm
-            if x < xm:
+            if x < xm: # P region
                 return W/2
-            if xm < x and x < W/2:
-                L = cls.D(x/H, W/H, s)
+            if xm < x and x < W/2: # Q region
+                L = OP.D(x/H, W/H, s)
                 try:
-                    sol = op.root_scalar(lambda xc: cls.D(xc, W/H, s) + L, bracket=[0,W/(2*H)], method="brentq")
+                    sol = op.root_scalar(lambda xc: OP.D(xc, W/H, s) + L, bracket=[0,W/(2*H)], method="brentq")
                 except ValueError:
                     raise ValueError("x: {}, xe:{}, xm:{}".format(x, xe, xm))
                 return sol.root * H * sgn
@@ -387,7 +402,7 @@ class OP: #Distribution optimization including bc expansion method
                     if x > xe:
                         np.delete(xarr,i)
                     else:
-                        x_new = core(x,s,H,Wx,xe,xm)
+                        x_new = R_region(x,s,H,Wx,xe,xm)
                         if math.fabs(x_new - x) < dx/2:
                             np.delete(xarr,i)
                             x_ex.append(xe)
@@ -399,7 +414,7 @@ class OP: #Distribution optimization including bc expansion method
                 if y > ye:
                     np.delete(yarr,i)
                 else:
-                    y_new = core(y,s,H,Wy,ye,ym)
+                    y_new = R_region(y,s,H,Wy,ye,ym)
                     if math.fabs(y_new - y) < dy/3:
                         np.delete(yarr, i)
                         y_ex.append(ye)
@@ -425,44 +440,48 @@ class OP: #Distribution optimization including bc expansion method
 
         return Array.from_arrays(x_arr_ex, y_arr_ex)
 
-    @classmethod
-    def solve_linear(cls, s, W, H, n_pre=False, k =0):
+    def solve_linear(s, W, H, n_pre=False, k =0):
         def solve_discretized(n, s, W, H, getfd=False):
             d= W/n
-            F = np.fromfunction(lambda i, j: Utils.intensity_function(s, H, d*i, d*j), (n,n), dtype=float)
+            F = np.fromfunction(lambda i, j: Radiation.lambertian(s, H, d*i, d*j), (n,n), dtype=float)
             delta = np.linalg.solve(F, np.ones(n))
             if getfd:
                 return delta, F
             return delta.min()
 
-        if n_pre:
-            n = int(n_pre)
-        else:
-            napp = 3/ hyper2F1(1/2, (s+2)/2, 3/2, - (W/(2*H))**2)
-            n = math.floor(napp)
-            state = 0
-            termination = False
-            while(not termination):
-                minvalue = solve_discretized(n, s, W, H)
-                if minvalue <0:
-                    if state ==2:
-                        n -= 1
-                        termination = True
-                    else:
-                        n-=1
-                        state =1
+        # Get boundary value of positiive solution
+        napp = math.floor(3/ hyper2F1(1/2, (s+2)/2, 3/2, - (W/(2*H))**2))
+        state = 0
+        termination = False
+        while(not termination):
+            minvalue = solve_discretized(n, s, W, H)
+            if minvalue <0:
+                if state ==2:
+                    napp -= 1
+                    termination = True
                 else:
-                    if state ==1:
-                        termination =True
-                    else:
-                        n+=1
-                        state=2
-            n = n-k
+                    napp -=1
+                    state =1
+            else:
+                if state ==1:
+                    termination =True
+                else:
+                    napp +=1
+                    state=2
         
-        d= W/n
-        delta, F = solve_discretized(n, s, W, H, getfd=True)
-        position =np.array([-W/2+d/2+(i-1)*d for i in range(1,n+1)])
-        return delta, position, F
+        dimension_n = n_pre if n_pre else napp - k
+        
+        if dimension_n >= napp:
+            # Solve discretized
+            n = dimension_n
+            d= W/n
+            delta, F = solve_discretized(n, s, W, H, getfd=True)
+            position =np.array([-W/2+d/2+(i-1)*d for i in range(1,n+1)])
+            return delta, position, F
+        else:
+            # using active set method and solve NNLS
+
+        
 
     @classmethod
     def solve_nnls(cls, s, W, H, n_nnls = 1, mean=True): #linear, nnls
