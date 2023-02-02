@@ -4,6 +4,7 @@ import math
 
 EPS = finfo(float).eps *1000
 
+
 def hyper2F1(a, b, c, z):
         if z> 1:
                 raise ValueError("z<=1 z= {}".format(z))
@@ -42,3 +43,14 @@ def hyper2F1(a, b, c, z):
 
             return c1 *sp.hyp2f1(a, c-b, a-b+1, w) + c2* sp.hyp2f1(b, c-a, b-a+1, w) 
 
+def get_wolfram_hyper():
+    from wolframclient.evaluation import WolframLanguageSession
+    from wolframclient.language import wl, wlexpr
+    session = WolframLanguageSession()
+
+    return session, session.function(wlexpr('Hypergeometric2F1'))
+
+def get_mpmath_hyper():
+    import mpmath
+
+    return mpmath.hyp2f1

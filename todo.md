@@ -1,5 +1,14 @@
 
+---------------------------------------------------------------
 
+2023-02-03
+1. Implement Rectangular ESC n_max array search routine
+2. OP: bc_expansion
+3. OP: linear solve -> power weight name change
+4. OP: binarization routine - (1: KDE), (2: FM modulation)
+5. Uniformity factor estimation routinesimplementation
+
+---------------------------------------------------------------
 
 How to find exact distribution of LEDs from solution of linear equaton.
 

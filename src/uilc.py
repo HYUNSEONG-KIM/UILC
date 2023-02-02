@@ -196,12 +196,12 @@ class ESC: #Expanded Sparrow Criterion
             raise ValueError(message)
 
 
-        def linearfunction(D, N):
+        def linear_function(D, N):
             y =0.0
             for i in range(1,N+1):
                 y += (1-(s+3)*(N+1-2*i)**2 * (D**2)/4)*((N+1-2*i)**2 * (D**2)/4 +1)**(-(s+6)/2)
             return y
-        def rectangularfunction(D, N, M):
+        def rectangular_function(D, N, M):
             y =0.0
             for i in range(1,N+1):
                 for j in range(1, M+1):
@@ -209,74 +209,93 @@ class ESC: #Expanded Sparrow Criterion
             return y
         
         if shape == "L":
-            if N==2:
-                return math.sqrt(4/(s+3))
-            if approx ==True and (N>4 and s>30):
-                return math.sqrt(3.2773/(s+4.2539))
-            
-            if N%2 ==0: #Even number of LED
-                sol = op.root_scalar(lambda D: linearfunction(D ,N), bracket=[0,1], method = "brentq")
-                return sol.root
-            else: #Odd number of LED
-                res = op.minimize_scalar(lambda D: linearfunction(D, N), bounds=(0,1), method = "bounded")
-                return  res.x
+            def L_cof(N):
+                if N==2:
+                    return math.sqrt(4/(s+3))
+                if approx ==True and (N>4 and s>30):
+                    return math.sqrt(3.2773/(s+4.2539))
 
-
+                if N%2 ==0: #Even number of LED
+                    sol = op.root_scalar(lambda D: linear_function(D ,N), bracket=[0,1], method = "brentq")
+                    return sol.root
+                else: #Odd number of LED
+                    res = op.minimize_scalar(lambda D: linear_function(D, N), bounds=(0,1), method = "bounded")
+                    return  res.x
+            cof = [L_cof(N)]
+            if M != 1:
+                return cof, L_cof(M)
+            else:
+                return cof
         if shape == "R":
             if N==2 and N == M:
-                return math.sqrt(4/(s+2))
+                cof= math.sqrt(4/(s+2))
             if approx == True and (N > 4 and M > 4 and s>30):
-                return math.sqrt(1.2125/(s-3.349))
-            try:
-                sol = op.root_scalar(lambda D: rectangularfunction(D, N, M), bracket=[0,1],method="brentq")
-                if sol.converged == False:
-                    res = op.minimize_scalar(lambda D: rectangularfunction(D, N, M), bounds=(0,1), method = "bounded")
-                    return res.x
-                else:
-                    return sol.root
-            except:
-                res = op.minimize_scalar(lambda D: rectangularfunction(D, N, M), bounds=(0,1), method = "bounded")
-                return res.x
+                cof= math.sqrt(1.2125/(s-3.349))
+            else:
+                try:
+                    sol = op.root_scalar(lambda D: rectangular_function(D, N, M), bracket=[0,1],method="brentq")
+                    if sol.converged == False:
+                        res = op.minimize_scalar(lambda D: rectangular_function(D, N, M), bounds=(0,1), method = "bounded")
+                        cof= res.x
+                    else:
+                        cof= sol.root
+                except:
+                    res = op.minimize_scalar(lambda D: rectangular_function(D, N, M), bounds=(0,1), method = "bounded")
+                    cof= res.x
+            return cof
 
         raise ValueError("\"shape\" argument must be \"L\" or \"R\" current value is {}".format(shape))
-    def get_nmax(s, W, H):
+    def get_nmax(s, W, H, thershold = 0.3):
+        W = list(W)
 
-        xlim = W/2
-        n = 2
-        d = ESC.coefficient(s, n)*H
-        nxe = (n-1)/2 *d
-
-        while((nxe < xlim)): # find critical 'n' fill the given region.
-            n += 1
+        if len(W) == 2: #Rectangular
+            # Calculate Rectagle search routine
+            Wx, Wy = W
+        elif len(W) == 1:
+            W = W[0]
+            xlim = W/2
+            n = 2
             d = ESC.coefficient(s, n)*H
             nxe = (n-1)/2 *d
-            nxm = d/2 if n%2 ==0 else d
-        
-        n_o = n
-        # For odd and even n, their order by requiring area can be reversed.
-        n1 = n-1
-        d1 =  ESC.coefficient(s, n1)*H
-        n1_area = (n1-1)/2 *d1
-        
-        n2 = n-2
-        d2 = ESC.coefficient(s, n2)*H
-        n2_area = (n2-1)/2 *d2
-        
-        n1_residual = xlim - n1_area
-        n2_residual = xlim - n2_area
 
-        n_residual = n1_residual/2 if n1_residual < n2_residual else n2_residual/2
-        n = n1 if n1_residual < n2_residual else n2
+            while((nxe < xlim)): # find critical 'n' fill the given region.
+                n += 1
+                d = ESC.coefficient(s, n)*H
+                nxe = (n-1)/2 *d
+                nxm = d/2 if n%2 ==0 else d
 
-        n_o_residual = math.fabs(nxe - xlim)/2 
-        if n_o_residual < d:
-            n = n if n_residual < n_o_residual else n_o
+            n_o = n
+            # For odd and even n, their order by requiring area can be reversed.
+            n1 = n-1
+            d1 =  ESC.coefficient(s, n1)*H
+            n1_area = (n1-1)/2 *d1
+
+            n2 = n-2
+            d2 = ESC.coefficient(s, n2)*H
+            n2_area = (n2-1)/2 *d2
+
+            n1_residual = xlim - n1_area
+            n2_residual = xlim - n2_area
+
+            n_residual = n1_residual/2 if n1_residual < n2_residual else n2_residual/2
+            n = n1 if n1_residual < n2_residual else n2
+
+            n_o_residual = math.fabs(nxe - xlim)/2 
+            if n_o_residual < d:
+                n = n if n_residual < n_o_residual else n_o
+
         return n
     
-    def array(s, N, M=1, shpae="L", approx=False):
-        d = ESC.coefficient(s, N, M, shpae, approx)
-        xarr = d* PositionArray.csym_index(N)
-        yarr = d* PositionArray.csym_index(M)
+    def array(s, N, M=1, shape="L", approx=False):
+        d = ESC.coefficient(s, N, M, shape, approx)
+
+        if shape == "L":
+            d= list(d)
+            dx, dy = (d[0], d[0]) if len(d) ==1 else d 
+        else:
+            dx = dy = d
+        xarr = dx* PositionArray.csym_index(N)
+        yarr = dy* PositionArray.csym_index(M)
         return PositionArray.from_arrays(xarr, yarr)
 
 class OP: #Distribution optimization including bc expansion method
