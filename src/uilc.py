@@ -43,6 +43,9 @@ class Array(np.ndarray):
             raise ValueError("The given arrays, xarr and yarr, must be 1 dim array.")
         return cls(np.flip(np.array(np.meshgrid(xarr,yarr)).transpose(), axis=None))
     @classmethod
+    def from_meshgrid(cls, mesh):
+        pass
+    @classmethod
     def uniform(cls, d_t, N_t):
         d_t = tuple(d_t)
         N_t = list(N_t)
@@ -71,20 +74,33 @@ class Array(np.ndarray):
 
         return cls.from_arrays(xarr, yarr) 
     #---------------------------------------------------
-    def get_axis_list(self, axis="x"):
+    def check_dim(self):
         shape = self.shape
         if len(shape) != 3 or len(shape) == 3 and len(self[0][0]) !=2 :
             raise ValueError("Not a 2 dimensional array of tuple.")
-        N = shape[1]
-        M = shape[0]
+
+    def get_axis_list(self, axis="x"):
+        self.check_dim()
+        
+        N = self.shape[1]
+        M = self.shape[0]
         if axis == "x" or axis == 0:
             return self[0,0:N][0:N,0]
         elif axis == "y" or axis == 1:
             return self[0:M,0][0:M,1]
         else:
             raise ValueError("axis argument must be 'x', 0 or 'y, 1 current={}".format(axis))
-    def intensity_on(self, plane_points):
-        pass
+    def to_meshgrid(self, indexing = "ij"):
+        xarr = self.get_axis_list(axis = "x")
+        yarr = self.get_axis_list(axis = "y")
+        return np.meshgrid(xarr, yarr, indexing=indexing)
+    def intensity_on(self, h, plane_points:np.ndarray, radiation_pattern:callable):
+        self.check_dim()
+        
+        for element_y in self:
+            for element in element_y:
+                x, y = element
+
         return ""
 
 class Utils: # basic Utils and functions including mathematical routines
