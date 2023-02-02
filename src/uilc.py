@@ -23,28 +23,50 @@ from .hypergeo import hyper2F1
 EPS = np.finfo(float).eps *1000
 
 class Radiation:
-    def lambertian(s, h, x, t):
-        return h**s/(h**2 + (x-t)**2)**(s/2+1)
-    def gaussian(s, h, x, t):
-        return (1/(h**2 + (t-x)**2))*np.exp(- s*((t-x)/h)**2)
-    def gauss_tan(s, h, x, t):
-        return (1/(h**2 + (t-x)**2))*np.exp(- s*(np.tan(np.abs(t-x)/h)**2))
+    def lambertian(s, h, d, inv=True):
+        r = 1 if inv else 0
+        return h**s/(h**2 + d)**(s/2+r)
+    def gaussian(s, h, d, inv = False):
+        r =  (1/(h**2 + d)) if inv else 1.
+        return r*np.exp(- s*(np.sqrt(d)/h)**2)
+    def gauss_tan(s, h, d, inv=False):
+        r =  (1/(h**2 + d)) if inv else 1.
+        return r*np.exp(- s*(np.tan(np.abs(np.sqrt(d))/h)**2))
 
-class Array(np.ndarray):
+class PositionArray(np.ndarray):
+    def __new__(cls, input_array, *args, **kwargs):
+        obj = np.asarray(input_array, *args, **kwargs).view(cls)
+        return obj
+    def __array_wrap__(self, out_arr, context=None):
+        return super().__array_wrap__(self, out_arr, context)
     def csym_index(N):
         return np.array([(i-(N-1)/2)] for i in range(0, N))
     #-------------------------------------------------
     @classmethod
     def from_arrays(cls, xarr, yarr=np.array([0.])):
-        xarr = np.array(xarr)
-        yarr = np.array(yarr)[::-1]
+        xarr = np.array(xarr)[::-1]
+        yarr = np.array(yarr)
 
         if len(xarr.shape) != 1 or len(yarr.shape) != 1:
             raise ValueError("The given arrays, xarr and yarr, must be 1 dim array.")
-        return cls(np.flip(np.array(np.meshgrid(xarr,yarr)).transpose(), axis=None))
+        return cls(np.flip(np.array(np.meshgrid(yarr,xarr)).transpose(), axis=None))
     @classmethod
-    def from_meshgrid(cls, mesh):
-        pass
+    def from_meshgrid(cls, meshx, meshy=None, indexing="xy"):
+        if meshy is None and len(meshx) ==2:
+            meshx, meshy = meshx
+        if meshx.shape != meshy.shape:
+            raise ValueError("Two mesh do not share dimension.")
+        if indexing == "ij":
+            meshx = meshx.transpose()
+            meshy = meshy.transpose()
+        elif indexing == "xy":
+            pass
+        else:
+            raise ValueError("Indexing must be \'ij\' or \'xy\'.")
+        mesh = (meshy, meshx)
+        arr = np.flip(np.array(mesh).transpose(), axis=None)[::-1]
+
+        return cls(np.transpose(arr, axes=(1, 0, 2)))
     @classmethod
     def uniform(cls, d_t, N_t):
         d_t = tuple(d_t)
@@ -58,7 +80,7 @@ class Array(np.ndarray):
         if len(N_t) == 1:
             N = M = N_t[0]
         else:
-            N, M = N
+            N, M = N_t
             N = int(N)
             M = int(M)
         
@@ -67,8 +89,8 @@ class Array(np.ndarray):
         if math.isclose(dx, 0., abs_tol =  EPS):
             return None
         
-        xarr = dx*np.array([(i-(N-1)/2)] for i in range(0, N))
-        yarr = dy*np.array([(j-(M-1)/2)] for j in range(0, M))
+        xarr = dx*(np.array([(i-(N-1)/2) for i in range(0, N)]))
+        yarr = dy*(np.array([(j-(M-1)/2) for j in range(0, M)]))
         
         #indexing = cls([[[(i-(N-1)/2), j-(M-1)/2] for i in range(0,N)] for j in range(0,M)])
 
@@ -90,20 +112,26 @@ class Array(np.ndarray):
             return self[0:M,0][0:M,1]
         else:
             raise ValueError("axis argument must be 'x', 0 or 'y, 1 current={}".format(axis))
-    def to_meshgrid(self, indexing = "ij"):
+    def to_meshgrid(self, indexing = "xy"):
         xarr = self.get_axis_list(axis = "x")
         yarr = self.get_axis_list(axis = "y")
         return np.meshgrid(xarr, yarr, indexing=indexing)
-    def intensity_on(self, h, plane_points:np.ndarray, radiation_pattern:callable):
+    def intensity_on(self, plane_meshes:np.ndarray, radiation_pattern:callable):
         self.check_dim()
-        
-        for element_y in self:
-            for element in element_y:
-                x, y = element
-
-        return ""
+        X, Y = plane_meshes
+        result = np.zeros(shape= X.shape)
+        for line in self:
+            for point in line:
+                p_x, p_y = point
+                d = (X- p_x)**2 + (Y-p_y)**2
+                result += radiation_pattern(d)
+        return result
 
 class Utils: # basic Utils and functions including mathematical routines
+    def plane_meshgrid(x_range, y_range, dim):
+        xline = np.linspace(x_range[0], x_range[1], dim[0])
+        yline = np.linspace(y_range[0], y_range[1], dim[1])
+        return np.meshgrid(xline, yline)
     def uniformarray(dx, N, dy=0.0, M=1, diff = False): #return uniformly distributed array of which distance between elements is 'd'
         indexing = np.array([[[(i-(N-1)/2), j-(M-1)/2] for i in range(0,N)] for j in range(0,M)])
         if diff:
@@ -300,9 +328,9 @@ class ESC: #Expanded Sparrow Criterion
     
     def array(s, N, M=1, shpae="L", approx=False):
         d = ESC.coefficient(s, N, M, shpae, approx)
-        xarr = d* Array.csym_index(N)
-        yarr = d* Array.csym_index(M)
-        return Array.from_arrays(xarr, yarr)
+        xarr = d* PositionArray.csym_index(N)
+        yarr = d* PositionArray.csym_index(M)
+        return PositionArray.from_arrays(xarr, yarr)
 
 class OP: #Distribution optimization including bc expansion method
     def D(d, alpha, s): #Done
@@ -454,7 +482,7 @@ class OP: #Distribution optimization including bc expansion method
         x_arr_ex.sort()
         y_arr_ex.sort()
 
-        return Array.from_arrays(x_arr_ex, y_arr_ex)
+        return PositionArray.from_arrays(x_arr_ex, y_arr_ex)
 
     def solve_linear(s, W, H, n_pre=False, k =0):
         def solve_discretized(n, s, W, H, getfd=False):
@@ -496,6 +524,7 @@ class OP: #Distribution optimization including bc expansion method
             return delta, position, F
         else:
             # using active set method and solve NNLS
+            pass
 
         
 
