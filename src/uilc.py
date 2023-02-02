@@ -32,6 +32,8 @@ class Radiation:
     def gauss_tan(s, h, d, inv=False):
         r =  (1/(h**2 + d)) if inv else 1.
         return r*np.exp(- s*(np.tan(np.abs(np.sqrt(d))/h)**2))
+    def dirac(d, ep=1000*EPS):
+        return ((np.sqrt(np.pi)*ep))**(-1) * np.exp(- d/(ep)**2)
 
 class PositionArray(np.ndarray):
     def __new__(cls, input_array, *args, **kwargs):
@@ -132,61 +134,6 @@ class Utils: # basic Utils and functions including mathematical routines
         xline = np.linspace(x_range[0], x_range[1], dim[0])
         yline = np.linspace(y_range[0], y_range[1], dim[1])
         return np.meshgrid(xline, yline)
-    def uniformarray(dx, N, dy=0.0, M=1, diff = False): #return uniformly distributed array of which distance between elements is 'd'
-        indexing = np.array([[[(i-(N-1)/2), j-(M-1)/2] for i in range(0,N)] for j in range(0,M)])
-        if diff:
-            for i in range(0,N):
-                indexing[0:M,i][0:M,0] *= dx
-                indexing[0:M,i][0:M,1] *= dy
-            return indexing
-        else:
-            return np.multiply(indexing, dx)
-    def get_axis_list(arr, axis="x"): 
-        shape = arr.shape
-        N = shape[1]
-        M = shape[0]
-        if axis == "x":
-            return arr[0,0:N][0:N,0]
-        elif axis == "y":
-            return arr[0:M,0][0:M,1]
-        else:
-            raise ValueError("axis argument must be 'x' or 'y, current={}".format(axis))
-    def get_2d_array(xarr, yarr=np.array([0.]), dim= 1):
-        if dim ==2:
-            xarr = Utils.get_axis_list(xarr)
-            yarr = Utils.get_axis_list(yarr)
-        return  np.flip(np.array(np.meshgrid(xarr,yarr)).transpose(), axis=None)
-    def getlocation(i, j, array): # (x-order, y-order) conversion for matrix row, column order indexing.
-        return array[j,i]
-    def gauss_distribution(x, y, arr, h): #approximating Dirac Delta function
-        M = arr.shape[0]
-        N = arr.shape[1]
-        result = 0.0
-        for i in range(0,N):
-            for j in range(0,M):
-                d = (x-arr[j,i][0])**2 + (y - arr[j,i][1])**2
-                result += (1/(math.fabs(h)*np.sqrt(2*math.pi)))*np.exp(-d/(2*h**2))
-        return result
-    def dirac(x, y, arr):
-        M = arr.shape[0]
-        N = arr.shape[1]
-        result = 0.0
-        for i in range(0,N):
-            for j in range(0,M):
-                d = 1 if (x-arr[j,i][0])**2 < EPS and (y - arr[j,i][1])**2 < EPS else 0
-                result += d
-        return result
-    
-    def lambertian_distribution(x, y, arr, s, h):
-        M = arr.shape[0]
-        N = arr.shape[1]
-        result =0.0
-        for i in range(0,N):
-            for j in range(0,M):
-                d = (x-arr[j,i][0])**2 + (y - arr[j,i][1])**2
-
-                result += h**s / (h**2 + d)**(s/2 +1)
-        return result
 
     def evaluation_factors(arr):
         stdE = (arr.max() - arr.min())/arr.mean() # |E_max -E_min|/E_mean
