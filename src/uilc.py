@@ -251,6 +251,22 @@ class ESC: #Expanded Sparrow Criterion
         if len(W) == 2: #Rectangular
             # Calculate Rectagle search routine
             Wx, Wy = W
+            ratio = Wy/Wx
+            
+            # Initial assumption:
+            # case 1 start from (2, 2)
+            # case 2 s > 30: using approximation
+            # Search:
+            #   +-1 Variations: 9- 1(current)
+            #       including previous test:  
+            n = (2, 2)
+            lim = (Wx/2, Wy/2)
+            d = ESC.coefficient(s, n[0], n[1], shape="R")
+            width_n = [d*(n[0]-1), d*(n[1]-1)]
+            #while( ) <- 어떻게 찾아야하는가 흠...
+            # ! 근사치가 주어져 있으니 그걸 이용해서 갯수룰 구한다음 최적화시키면 되지 !
+            #
+
         elif len(W) == 1:
             W = W[0]
             xlim = W/2
@@ -262,7 +278,7 @@ class ESC: #Expanded Sparrow Criterion
                 n += 1
                 d = ESC.coefficient(s, n)*H
                 nxe = (n-1)/2 *d
-                nxm = d/2 if n%2 ==0 else d
+                #nxm = d/2 if n%2 ==0 else d
 
             n_o = n
             # For odd and even n, their order by requiring area can be reversed.
@@ -274,17 +290,19 @@ class ESC: #Expanded Sparrow Criterion
             d2 = ESC.coefficient(s, n2)*H
             n2_area = (n2-1)/2 *d2
 
-            n1_residual = xlim - n1_area
+            n1_residual = xlim - n1_area # By the loop termination condition residuals are guaranted to be positive.
             n2_residual = xlim - n2_area
 
-            n_residual = n1_residual/2 if n1_residual < n2_residual else n2_residual/2
-            n = n1 if n1_residual < n2_residual else n2
+            #--------------------------------------------------------------------------
+            n, n_residual = (n1 ,n1_residual * thershold) if n1_residual < n2_residual else (n2 , n2_residual * thershold)
 
-            n_o_residual = math.fabs(nxe - xlim)/2 
+            n_o_residual = math.fabs(nxe - xlim) * thershold
             if n_o_residual < d:
                 n = n if n_residual < n_o_residual else n_o
 
-        return n
+            N = (n, n ,1)
+
+        return N
     
     def array(s, N, M=1, shape="L", approx=False):
         d = ESC.coefficient(s, N, M, shape, approx)
