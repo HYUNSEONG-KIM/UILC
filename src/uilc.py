@@ -15,9 +15,12 @@
 #
 #
 
-import numpy as np
 import math
+from collections.abc import Iterable
+
+import numpy as np
 from scipy import optimize as op
+
 from .hypergeo import hyper2F1
 
 EPS = np.finfo(float).eps *1000
@@ -37,10 +40,14 @@ class Radiation:
 
 class PositionArray(np.ndarray):
     def __new__(cls, input_array, *args, **kwargs):
-        obj = np.asarray(input_array, *args, **kwargs).view(cls)
-        return obj
+        #obj = np.asarray(input_array, *args, **kwargs).view(cls)
+        #return obj
+        return super().__new__(cls, *args, **kwargs)
     def __array_wrap__(self, out_arr, context=None):
         return super().__array_wrap__(self, out_arr, context)
+    #def __add__(self, *args, **kwargs):
+    #    return super().__add__(*args)
+
     def csym_index(N):
         return np.array([(i-(N-1)/2)] for i in range(0, N))
     #-------------------------------------------------
@@ -69,10 +76,17 @@ class PositionArray(np.ndarray):
         arr = np.flip(np.array(mesh).transpose(), axis=None)[::-1]
 
         return cls(np.transpose(arr, axes=(1, 0, 2)))
+    
     @classmethod
     def uniform(cls, d_t, N_t):
-        d_t = tuple(d_t)
-        N_t = list(N_t)
+        if isinstance(d_t, Iterable):
+            d_t = list(d_t)
+        else:
+            d_t = [d_t, d_t]
+        if isinstance(N_t, Iterable):
+            N_t = list(N_t)
+        else:
+            N_t = [N_t, N_t]
 
         if len(d_t) == 1:
             dx = dy =d_t[0]
@@ -139,6 +153,13 @@ class Utils: # basic Utils and functions including mathematical routines
         stdE = (arr.max() - arr.min())/arr.mean() # |E_max -E_min|/E_mean
         rmse = (arr.std())/arr.mean() # std/mean
         return stdE, rmse
+    def half_ceil(x):
+        rho = x - math.floor(x)
+        if x >= 0.5:
+            result = math.ceil(x)
+        else:
+            result = math.floor(x)
+        return result
 #=============================================================================================================================================
     def transformMatrix(n):
         Fd = np.array([[1 if i == j else (-1 if i-j == 1 else 0) for j in range(0,n)] for i in range(0,n)])
@@ -186,6 +207,46 @@ class Utils: # basic Utils and functions including mathematical routines
 
         return (ydata - Utils.gauss_distribution(xdata, np.array([[[0]]]), location,h))[0][0]
 class ESC: #Expanded Sparrow Criterion
+    def _linear(D, N):
+        y =0.0
+        for i in range(1,N+1):
+            y += (1-(s+3)*(N+1-2*i)**2 * (D**2)/4)*((N+1-2*i)**2 * (D**2)/4 +1)**(-(s+6)/2)
+        return y
+    def _rectangular(D, N, M):
+        y =0.0
+        for i in range(1,N+1):
+            for j in range(1, M+1):
+                y += (((N+1-2*i)**2 + (M+1-2*j)**2)*(D**2/4)+1)**(-(s/2+3.0)) * (1-((s+3)*(N+1-2*i)**2 -(M+1-2*j)**2)*(D**2)/4)
+        return y
+    def _coefficient_linear(s, N, approx=False):
+        if N == 2:
+            cof = math.sqrt(4/(s+3))
+        elif approx and (N >4 and s >30):
+            cof = math.sqrt(3.2773/(s+4.2539))
+        elif N%2 == 0 :
+            sol = op.root_scalar(lambda D: ESC._linear(D ,N), bracket=[0,1], method = "brentq")
+            cof = sol.root
+        else:
+            res = op.minimize_scalar(lambda D: ESC._linear(D, N), bounds=(0,1), method = "bounded")
+            cof = res.x
+        return cof
+    def _coefficient_rectangular(s, N, M, approx=False):
+        if N==2 and N == M:
+            cof= math.sqrt(4/(s+2))
+        if approx == True and (N > 4 and M > 4 and s>30):
+            cof= math.sqrt(1.2125/(s-3.349))
+        else:
+            try:
+                sol = op.root_scalar(lambda D: rectangular_function(D, N, M), bracket=[0,1],method="brentq")
+                if sol.converged == False:
+                    res = op.minimize_scalar(lambda D: rectangular_function(D, N, M), bounds=(0,1), method = "bounded")
+                    cof= res.x
+                else:
+                    cof= sol.root
+            except:
+                res = op.minimize_scalar(lambda D: rectangular_function(D, N, M), bounds=(0,1), method = "bounded")
+                cof= res.x
+        return cof
     def coefficient(s, N, M=1, shape = "L" ,approx=False):
         #Value check : s>= 1.0, N, M are natural numbers, shape ="L" or "R"
         if not isinstance(s,(float, int)) or not isinstance(N, int) or not isinstance(M, int):
@@ -194,64 +255,89 @@ class ESC: #Expanded Sparrow Criterion
         if s <1.0 or N <0 or M <0:
             message = 'Domain Error: s >= 1, N and M >=1 \n Current arguments: s={}, N ={}, M={}'.format((s), (N), (M))
             raise ValueError(message)
-
-
-        def linear_function(D, N):
-            y =0.0
-            for i in range(1,N+1):
-                y += (1-(s+3)*(N+1-2*i)**2 * (D**2)/4)*((N+1-2*i)**2 * (D**2)/4 +1)**(-(s+6)/2)
-            return y
-        def rectangular_function(D, N, M):
-            y =0.0
-            for i in range(1,N+1):
-                for j in range(1, M+1):
-                    y += (((N+1-2*i)**2 + (M+1-2*j)**2)*(D**2/4)+1)**(-(s/2+3.0)) * (1-((s+3)*(N+1-2*i)**2 -(M+1-2*j)**2)*(D**2)/4)
-            return y
         
         if shape == "L":
-            def L_cof(N):
-                if N==2:
-                    return math.sqrt(4/(s+3))
-                if approx ==True and (N>4 and s>30):
-                    return math.sqrt(3.2773/(s+4.2539))
-
-                if N%2 ==0: #Even number of LED
-                    sol = op.root_scalar(lambda D: linear_function(D ,N), bracket=[0,1], method = "brentq")
-                    return sol.root
-                else: #Odd number of LED
-                    res = op.minimize_scalar(lambda D: linear_function(D, N), bounds=(0,1), method = "bounded")
-                    return  res.x
-            cof = [L_cof(N)]
-            if M != 1:
-                return cof, L_cof(M)
-            else:
-                return cof
+            cof_x = ESC._coefficient_linear(s, N, approx)
+            cof_y = None if M == 1 else ESC._coefficient_linear(s, M, approx)
+            return cof_x, cof_y
         if shape == "R":
-            if N==2 and N == M:
-                cof= math.sqrt(4/(s+2))
-            if approx == True and (N > 4 and M > 4 and s>30):
-                cof= math.sqrt(1.2125/(s-3.349))
-            else:
-                try:
-                    sol = op.root_scalar(lambda D: rectangular_function(D, N, M), bracket=[0,1],method="brentq")
-                    if sol.converged == False:
-                        res = op.minimize_scalar(lambda D: rectangular_function(D, N, M), bounds=(0,1), method = "bounded")
-                        cof= res.x
-                    else:
-                        cof= sol.root
-                except:
-                    res = op.minimize_scalar(lambda D: rectangular_function(D, N, M), bounds=(0,1), method = "bounded")
-                    cof= res.x
-            return cof
+            cof_x = cof_y = ESC._coefficient_rectangular(s, N, M, approx)
+            return cof_x, cof_y
 
         raise ValueError("\"shape\" argument must be \"L\" or \"R\" current value is {}".format(shape))
+
+    def _linear_nmax(s, W, H, thershold):
+        W = W[0]
+        xlim = W/2
+        n = 2
+        d = ESC.coefficient(s, n)*H
+        nxe = (n-1)/2 *d
+
+        while((nxe < xlim)): # find critical 'n' fill the given region.
+            n += 1
+            d = ESC.coefficient(s, n)*H
+            nxe = (n-1)/2 *d
+            #nxm = d/2 if n%2 ==0 else d
+
+        n_o = n
+        # For odd and even n, their order by requiring area can be reversed.
+        # Below codes are choosing process by the given thershold value.
+        n1 = n-1
+        d1 =  ESC.coefficient(s, n1)*H
+        n1_area = (n1-1)/2 *d1
+
+        n2 = n-2
+        d2 = ESC.coefficient(s, n2)*H
+        n2_area = (n2-1)/2 *d2
+
+        n1_residual = xlim - n1_area # By the loop termination condition residuals are guaranted to be positive.
+        n2_residual = xlim - n2_area
+
+        #--------------------------------------------------------------------------
+        n, n_residual = (n1 ,n1_residual * thershold) if n1_residual < n2_residual else (n2 , n2_residual * thershold)
+
+        n_o_residual = math.fabs(nxe - xlim) * thershold
+        if n_o_residual < d:
+            n = n if n_residual < n_o_residual else n_o
+        
+        #----------------------------
+        exceed = False
+
+        if nxe > xlim:
+            exceed = True
+
+        return (n, n, 1, exceed) # (nmax, n_x, n_y, exceed), n_x * n_y = nmax
+
+    def _dim_check(n, W, H):
+        d = H*ESC._coefficient_rectangular(s, n[0], n[1], approx=False)
+        dim_x, dim_y = d*(n[0]-1), d*(n[1]-1)
+        return dim_x> W[0], dim_y >W[1]
+
     def get_nmax(s, W, H, thershold = 0.3):
         W = list(W)
+        if len(W) >2:
+            W = W[:2]
 
         if len(W) == 2: #Rectangular
             # Calculate Rectagle search routine
             Wx, Wy = W
-            ratio = Wy/Wx
+            alpha = Wy/Wx
+
+            # initial point
+            if s > 30:
+                approx_d = H * ESC._coefficient_rectangular(s, N=5, M=5, approx=True)
+                nx_if, ny_if = Wx/approx_d, Wy/approx_d
+                n_i = [Utils.half_ceil(nx_if), Utils.half_ceil(ny_if)]
+            else:
+                nx_i, m1, m2 = ESC._linear_nmax(s, W, H, thershold)
+                ny_i = Utils.half_ceil(alpha*nx_i)
+                n_i = [nx_i, ny_i]
+            
+            n = n_i
+            # Search
+
+            while():
+                current = ESC._dim_check(n, W, H)
             
             # Initial assumption:
             # case 1 start from (2, 2)
@@ -261,51 +347,19 @@ class ESC: #Expanded Sparrow Criterion
             #       including previous test:  
             n = (2, 2)
             lim = (Wx/2, Wy/2)
-            d = ESC.coefficient(s, n[0], n[1], shape="R")
+            d, x = ESC.coefficient(s, n[0], n[1], shape="R")
             width_n = [d*(n[0]-1), d*(n[1]-1)]
             #while( ) <- 어떻게 찾아야하는가 흠...
             # ! 근사치가 주어져 있으니 그걸 이용해서 갯수룰 구한다음 최적화시키면 되지 !
             #
 
         elif len(W) == 1:
-            W = W[0]
-            xlim = W/2
-            n = 2
-            d = ESC.coefficient(s, n)*H
-            nxe = (n-1)/2 *d
-
-            while((nxe < xlim)): # find critical 'n' fill the given region.
-                n += 1
-                d = ESC.coefficient(s, n)*H
-                nxe = (n-1)/2 *d
-                #nxm = d/2 if n%2 ==0 else d
-
-            n_o = n
-            # For odd and even n, their order by requiring area can be reversed.
-            n1 = n-1
-            d1 =  ESC.coefficient(s, n1)*H
-            n1_area = (n1-1)/2 *d1
-
-            n2 = n-2
-            d2 = ESC.coefficient(s, n2)*H
-            n2_area = (n2-1)/2 *d2
-
-            n1_residual = xlim - n1_area # By the loop termination condition residuals are guaranted to be positive.
-            n2_residual = xlim - n2_area
-
-            #--------------------------------------------------------------------------
-            n, n_residual = (n1 ,n1_residual * thershold) if n1_residual < n2_residual else (n2 , n2_residual * thershold)
-
-            n_o_residual = math.fabs(nxe - xlim) * thershold
-            if n_o_residual < d:
-                n = n if n_residual < n_o_residual else n_o
-
-            N = (n, n ,1)
+            N = ESC._linear_nmax(s, W, H, thershold)
 
         return N
     
     def array(s, N, M=1, shape="L", approx=False):
-        d = ESC.coefficient(s, N, M, shape, approx)
+        dx, dy = ESC.coefficient(s, N, M, shape, approx)
 
         if shape == "L":
             d= list(d)
