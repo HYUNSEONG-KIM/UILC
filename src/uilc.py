@@ -40,17 +40,65 @@ class Radiation:
 
 class PositionArray(np.ndarray):
     def __new__(cls, input_array, *args, **kwargs):
-        #obj = np.asarray(input_array, *args, **kwargs).view(cls)
-        #return obj
-        return super().__new__(cls, *args, **kwargs)
+        obj = np.asarray(input_array, *args, **kwargs).view(cls)
+        return obj
     def __array_wrap__(self, out_arr, context=None):
         return super().__array_wrap__(self, out_arr, context)
     #def __add__(self, *args, **kwargs):
     #    return super().__add__(*args)
+    def __array_ufunc__(self, ufunc, method, *inputs, out=None, **kwargs):
+        args = []
+        in_no = []
+        for i, input_ in enumerate(inputs):
+            if isinstance(input_, PositionArray):
+                in_no.append(i)
+                args.append(input_.view(np.ndarray))
+            else:
+                args.append(input_)
+
+        outputs = out
+        out_no = []
+        if outputs:
+            out_args = []
+            for j, output in enumerate(outputs):
+                if isinstance(output, PositionArray):
+                    out_no.append(j)
+                    out_args.append(output.view(np.ndarray))
+                else:
+                    out_args.append(output)
+            kwargs['out'] = tuple(out_args)
+        else:
+            outputs = (None,) * ufunc.nout
+
+        info = {}
+        if in_no:
+            info['inputs'] = in_no
+        if out_no:
+            info['outputs'] = out_no
+
+        results = super().__array_ufunc__(ufunc, method, *args, **kwargs)
+        if results is NotImplemented:
+            return NotImplemented
+
+        if method == 'at':
+            if isinstance(inputs[0], PositionArray):
+                inputs[0].info = info
+            return
+
+        if ufunc.nout == 1:
+            results = (results,)
+
+        results = tuple((np.asarray(result).view(PositionArray)
+                         if output is None else output)
+                        for result, output in zip(results, outputs))
+        if results and isinstance(results[0], PositionArray):
+            results[0].info = info
+
+        return results[0] if len(results) == 1 else results
+    #-------------------------------------------------
 
     def csym_index(N):
         return np.array([(i-(N-1)/2)] for i in range(0, N))
-    #-------------------------------------------------
     @classmethod
     def from_arrays(cls, xarr, yarr=np.array([0.])):
         xarr = np.array(xarr)[::-1]
@@ -126,6 +174,8 @@ class PositionArray(np.ndarray):
             return self[0,0:N][0:N,0]
         elif axis == "y" or axis == 1:
             return self[0:M,0][0:M,1]
+        elif axis == "z" or axis == 2:
+            return self[0,0:N][0:N,0], self[0:M,0][0:M,1]
         else:
             raise ValueError("axis argument must be 'x', 0 or 'y, 1 current={}".format(axis))
     def to_meshgrid(self, indexing = "xy"):
@@ -155,11 +205,16 @@ class Utils: # basic Utils and functions including mathematical routines
         return stdE, rmse
     def half_ceil(x):
         rho = x - math.floor(x)
-        if x >= 0.5:
+        if rho >= 0.5:
             result = math.ceil(x)
         else:
             result = math.floor(x)
         return result
+    def print_mesh_point(arr):
+        for line in arr:
+            for element in line:
+                print(f"({element[0]:.2}, {element[1]:.2})", end = "")
+            print(":\n")
 #=============================================================================================================================================
     def transformMatrix(n):
         Fd = np.array([[1 if i == j else (-1 if i-j == 1 else 0) for j in range(0,n)] for i in range(0,n)])
@@ -207,12 +262,12 @@ class Utils: # basic Utils and functions including mathematical routines
 
         return (ydata - Utils.gauss_distribution(xdata, np.array([[[0]]]), location,h))[0][0]
 class ESC: #Expanded Sparrow Criterion
-    def _linear(D, N):
+    def _linear(D, s, N):
         y =0.0
         for i in range(1,N+1):
             y += (1-(s+3)*(N+1-2*i)**2 * (D**2)/4)*((N+1-2*i)**2 * (D**2)/4 +1)**(-(s+6)/2)
         return y
-    def _rectangular(D, N, M):
+    def _rectangular(D, s, N, M):
         y =0.0
         for i in range(1,N+1):
             for j in range(1, M+1):
@@ -224,34 +279,36 @@ class ESC: #Expanded Sparrow Criterion
         elif approx and (N >4 and s >30):
             cof = math.sqrt(3.2773/(s+4.2539))
         elif N%2 == 0 :
-            sol = op.root_scalar(lambda D: ESC._linear(D ,N), bracket=[0,1], method = "brentq")
+            sol = op.root_scalar(lambda D: ESC._linear(D, s, N), bracket=[0,1], method = "brentq")
             cof = sol.root
         else:
-            res = op.minimize_scalar(lambda D: ESC._linear(D, N), bounds=(0,1), method = "bounded")
+            res = op.minimize_scalar(lambda D: ESC._linear(D, s, N), bounds=(0,1), method = "bounded")
             cof = res.x
         return cof
     def _coefficient_rectangular(s, N, M, approx=False):
+        if M > N:
+            N, M = M, N
         if N==2 and N == M:
             cof= math.sqrt(4/(s+2))
         if approx == True and (N > 4 and M > 4 and s>30):
             cof= math.sqrt(1.2125/(s-3.349))
         else:
             try:
-                sol = op.root_scalar(lambda D: rectangular_function(D, N, M), bracket=[0,1],method="brentq")
+                sol = op.root_scalar(lambda D: ESC._rectangular(D, s, N, M), bracket=[0,1],method="brentq")
                 if sol.converged == False:
-                    res = op.minimize_scalar(lambda D: rectangular_function(D, N, M), bounds=(0,1), method = "bounded")
+                    res = op.minimize_scalar(lambda D: ESC._rectangular(D, s, N, M), bounds=(0,1), method = "bounded")
                     cof= res.x
                 else:
                     cof= sol.root
             except:
-                res = op.minimize_scalar(lambda D: rectangular_function(D, N, M), bounds=(0,1), method = "bounded")
+                res = op.minimize_scalar(lambda D: ESC._rectangular(D, s, N, M), bounds=(0,1), method = "bounded")
                 cof= res.x
         return cof
     def coefficient(s, N, M=1, shape = "L" ,approx=False):
         #Value check : s>= 1.0, N, M are natural numbers, shape ="L" or "R"
-        if not isinstance(s,(float, int)) or not isinstance(N, int) or not isinstance(M, int):
-            message = 'Check the types of arguments s = int or float >=1, N and M = int>0 \n Current types are s={}, N ={}, M={}'.format(type(s), type(N), type(M))
-            raise TypeError(message)
+        #if not isinstance(s,(float, int)) or not isinstance(N, (int, np.int32)) or not isinstance(M, (int, np.int32)):
+        #    message = 'Check the types of arguments s = int or float >=1, N and M = int>0 \n Current types are s={}, N ={}, M={}'.format(type(s), type(N), type(M))
+        #    raise TypeError(message)
         if s <1.0 or N <0 or M <0:
             message = 'Domain Error: s >= 1, N and M >=1 \n Current arguments: s={}, N ={}, M={}'.format((s), (N), (M))
             raise ValueError(message)
@@ -335,6 +392,7 @@ class ESC: #Expanded Sparrow Criterion
             
             n = n_i
             # Search
+            # Line algorithm use
 
             while():
                 current = ESC._dim_check(n, W, H)
