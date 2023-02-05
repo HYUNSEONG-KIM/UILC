@@ -1,4 +1,12 @@
 
+2023-02-6
+
+1. Finished Line point algorithm() for Rectangular ESC n_max routine: n_max routine is not finished.
+2. OP: bc_expansion
+3. OP: linear solve -> power weight name change
+4. OP: binarization routine - (1: KDE), (2: FM modulation)
+5. Uniformity factor estimation routines implementation
+6. 
 ---------------------------------------------------------------
 
 2023-02-03
@@ -6,7 +14,7 @@
 2. OP: bc_expansion
 3. OP: linear solve -> power weight name change
 4. OP: binarization routine - (1: KDE), (2: FM modulation)
-5. Uniformity factor estimation routinesimplementation
+5. Uniformity factor estimation routines implementation
 
 ---------------------------------------------------------------
 
