@@ -44,8 +44,6 @@ class PositionArray(np.ndarray):
         return obj
     def __array_wrap__(self, out_arr, context=None):
         return super().__array_wrap__(self, out_arr, context)
-    #def __add__(self, *args, **kwargs):
-    #    return super().__add__(*args)
     def __array_ufunc__(self, ufunc, method, *inputs, out=None, **kwargs):
         args = []
         in_no = []
@@ -210,6 +208,10 @@ class Utils: # basic Utils and functions including mathematical routines
         else:
             result = math.floor(x)
         return result
+    def near_integers(x):
+        low = math.floor(x)
+        return low, low+1 
+        
     def print_mesh_point(arr):
         for line in arr:
             for element in line:
