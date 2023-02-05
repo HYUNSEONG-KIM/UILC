@@ -16,7 +16,9 @@
 #
 
 import math
+from copy import deepcopy
 from collections.abc import Iterable
+from typing import Tuple
 
 import numpy as np
 from scipy import optimize as op
@@ -217,6 +219,88 @@ class Utils: # basic Utils and functions including mathematical routines
             for element in line:
                 print(f"({element[0]:.2}, {element[1]:.2})", end = "")
             print(":\n")
+class Utils_Algorithm:
+    # line_ : Bresenham's line algorithm - modified
+    def line_plane_determinator(point, slope, d, dx = 1):
+        a = slope* dx
+        b = - dx
+        c = dx* d
+
+        x, y = point
+        result = (a*x + b*y + c)
+
+        if math.fabs(result) < EPS:
+            place = 0
+        elif result >0:
+            place = 1
+        else:
+            place = -1
+        
+        return place
+        #return 1 if (a*x + b*y + c) >=0 else -1
+    def line_next_points(point, slope, dir = True):
+        xi, yi = point
+        dx = 1 if dir else -1
+        dy = (1 if dir else -1) * (1 if slope>0 else -1)
+
+        np_1 = [xi + dx, yi +dy]
+        np_2, np_3 = [xi, yi+dy], [xi +dx, yi] 
+        if math.fabs(slope) < 1:
+            np_2, np_3 = np_3, np_2
+        return np_1, np_2, np_3
+    def line_points(initial_point, line_param:Tuple[float, float], p_range:Tuple[int, int] ):
+        slope, shift = line_param
+        f = lambda x, y : Utils_Algorithm.line_plane_determinator((x,y), slope, shift)
+        slope_cor = (-1 if math.fabs(slope)>1 else 1)
+        points_main =[initial_point]
+        points_sub = []
+        # positive direction
+        dir = True
+        p = deepcopy(initial_point)
+        for i in range(0, p_range[1]):
+            p1, p2, p3 = Utils_Algorithm.line_next_points(p, slope, dir)
+            pd = [(p1[0] + p2[0])/2, (p1[1] + p2[1])/2]
+            D = (slope_cor) * f(*pd)
+            if D == 1:
+                points_main.append(p1)
+                points_main.append(p2)
+                points_main.append(p3)
+                pf = p1
+            elif D == -1:
+                points_main.append(p2)
+                pf = p2
+            else:
+                points_main.append(p1)
+                points_main.append(p2)
+                p_ = [p1[0] + (p2[0]- p[0]), p1[1] + (p2[1]- p[1])]
+                points_main.append(p_)
+                pf = p_ # 2 step
+            p = pf
+        # negative direction
+        dir = False
+        p = deepcopy(initial_point)
+        for i in range(0, p_range[0]):
+            p1, p2, p3 = Utils_Algorithm.line_next_points(p, slope, dir)
+            pd = [(p1[0] + p2[0])/2, (p1[1] + p2[1])/2]
+            D = (slope_cor) * ( -f(*pd)) 
+            if D == 1:
+                points_main.append(p1)
+                points_main.append(p2)
+                points_main.append(p3)
+                pf = p1
+            elif D == -1:
+                points_main.append(p2)
+                pf = p2
+            else:
+                points_main.append(p1)
+                points_main.append(p2)
+                p_ = [p1[0] + (p2[0]- p[0]), p1[1] + (p2[1]- p[1])]
+                points_main.append(p_)
+                pf = p_ # 2 step
+                
+            p = pf
+        return np.array(points_main), np.array(points_sub)
+
 #=============================================================================================================================================
     def transformMatrix(n):
         Fd = np.array([[1 if i == j else (-1 if i-j == 1 else 0) for j in range(0,n)] for i in range(0,n)])
