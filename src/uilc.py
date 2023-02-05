@@ -24,6 +24,7 @@ import numpy as np
 from scipy import optimize as op
 
 from .hypergeo import hyper2F1
+from .bre_line import points 
 
 EPS = np.finfo(float).eps *1000
 
@@ -219,88 +220,7 @@ class Utils: # basic Utils and functions including mathematical routines
             for element in line:
                 print(f"({element[0]:.2}, {element[1]:.2})", end = "")
             print(":\n")
-class Utils_Algorithm:
-    # line_ : Bresenham's line algorithm - modified
-    def line_plane_determinator(point, slope, d, dx = 1):
-        a = slope* dx
-        b = - dx
-        c = dx* d
-
-        x, y = point
-        result = (a*x + b*y + c)
-
-        if math.fabs(result) < EPS:
-            place = 0
-        elif result >0:
-            place = 1
-        else:
-            place = -1
-        
-        return place
-        #return 1 if (a*x + b*y + c) >=0 else -1
-    def line_next_points(point, slope, dir = True):
-        xi, yi = point
-        dx = 1 if dir else -1
-        dy = (1 if dir else -1) * (1 if slope>0 else -1)
-
-        np_1 = [xi + dx, yi +dy]
-        np_2, np_3 = [xi, yi+dy], [xi +dx, yi] 
-        if math.fabs(slope) < 1:
-            np_2, np_3 = np_3, np_2
-        return np_1, np_2, np_3
-    def line_points(initial_point, line_param:Tuple[float, float], p_range:Tuple[int, int] ):
-        slope, shift = line_param
-        f = lambda x, y : Utils_Algorithm.line_plane_determinator((x,y), slope, shift)
-        slope_cor = (-1 if math.fabs(slope)>1 else 1)
-        points_main =[initial_point]
-        points_sub = []
-        # positive direction
-        dir = True
-        p = deepcopy(initial_point)
-        for i in range(0, p_range[1]):
-            p1, p2, p3 = Utils_Algorithm.line_next_points(p, slope, dir)
-            pd = [(p1[0] + p2[0])/2, (p1[1] + p2[1])/2]
-            D = (slope_cor) * f(*pd)
-            if D == 1:
-                points_main.append(p1)
-                points_main.append(p2)
-                points_main.append(p3)
-                pf = p1
-            elif D == -1:
-                points_main.append(p2)
-                pf = p2
-            else:
-                points_main.append(p1)
-                points_main.append(p2)
-                p_ = [p1[0] + (p2[0]- p[0]), p1[1] + (p2[1]- p[1])]
-                points_main.append(p_)
-                pf = p_ # 2 step
-            p = pf
-        # negative direction
-        dir = False
-        p = deepcopy(initial_point)
-        for i in range(0, p_range[0]):
-            p1, p2, p3 = Utils_Algorithm.line_next_points(p, slope, dir)
-            pd = [(p1[0] + p2[0])/2, (p1[1] + p2[1])/2]
-            D = (slope_cor) * ( -f(*pd)) 
-            if D == 1:
-                points_main.append(p1)
-                points_main.append(p2)
-                points_main.append(p3)
-                pf = p1
-            elif D == -1:
-                points_main.append(p2)
-                pf = p2
-            else:
-                points_main.append(p1)
-                points_main.append(p2)
-                p_ = [p1[0] + (p2[0]- p[0]), p1[1] + (p2[1]- p[1])]
-                points_main.append(p_)
-                pf = p_ # 2 step
-                
-            p = pf
-        return np.array(points_main), np.array(points_sub)
-
+class UtilsAlgorithm:
 #=============================================================================================================================================
     def transformMatrix(n):
         Fd = np.array([[1 if i == j else (-1 if i-j == 1 else 0) for j in range(0,n)] for i in range(0,n)])
@@ -308,7 +228,7 @@ class Utils_Algorithm:
 
         return Fd, inFd
     def loc_to_diff(x, n):
-        fd, infd = Utils.transformMatrix(n)
+        fd, infd = UtilsAlgorithm.transformMatrix(n)
         d= fd.dot(x)
         w= -2*d[0]
         d0 = d[1:]
@@ -316,7 +236,7 @@ class Utils_Algorithm:
         #print(m)
         return d0[0:m], w, m
     def diff_to_loc(diff, n, w):
-        fd , infd = Utils.transformMatrix(n)
+        fd , infd = UtilsAlgorithm.transformMatrix(n)
 
         if n%2 ==0:
             m = n/2
@@ -326,27 +246,28 @@ class Utils_Algorithm:
             d= np.append(diff, np.flip(diff))
         np.insert(d, 0, -w/2)
         return infd.dot(d)
-    def f_residual(d, **kwargs):
-        W = kwargs["W"]
-        h = kwargs["h"]
-        n = kwargs["n"]
-        xdata = kwargs["xdata"]
-        ydata = kwargs["ydata"]
-        m = d.size
-        fd, infd = Utils.transformMatrix(n)
+    #def f_residual(d, **kwargs):
+    #    W = kwargs["W"]
+    #    h = kwargs["h"]
+    #    n = kwargs["n"]
+    #    xdata = kwargs["xdata"]
+    #    ydata = kwargs["ydata"]
+    #    m = d.size
+    #    fd, infd = UtilsAlgorithm.transformMatrix(n)
+    #
+    #    if n%2 ==0:
+    #        d0 = np.append(d[0:m], np.flip(d[0:m-1]))
+    #        pass
+    #    else:
+    #        d0 = np.append(d,np.flip(d))
+    #
+    #    d0 = np.insert(d0, 0, -W/2)
+    #    xi = infd.dot(d0)
+    #
+    #    location = np.array([[[x, 0] for x in xi]])
+    #
+    #    return (ydata - Utils.gauss_distribution(xdata, np.array([[[0]]]), location,h))[0][0]
 
-        if n%2 ==0:
-            d0 = np.append(d[0:m], np.flip(d[0:m-1]))
-            pass
-        else:
-            d0 = np.append(d,np.flip(d))
-
-        d0 = np.insert(d0, 0, -W/2)
-        xi = infd.dot(d0)
-
-        location = np.array([[[x, 0] for x in xi]])
-
-        return (ydata - Utils.gauss_distribution(xdata, np.array([[[0]]]), location,h))[0][0]
 class ESC: #Expanded Sparrow Criterion
     def _linear(D, s, N):
         y =0.0
@@ -464,7 +385,13 @@ class ESC: #Expanded Sparrow Criterion
         if len(W) == 2: #Rectangular
             # Calculate Rectagle search routine
             Wx, Wy = W
-            alpha = Wy/Wx
+            switch = False
+            if Wy > Wx:
+                Wx, Wy = Wy, Wy
+                switch = True
+            m = Wy/Wx
+            d = 0
+            p_range = (5, 5)
 
             # initial point
             if s > 30:
@@ -473,29 +400,20 @@ class ESC: #Expanded Sparrow Criterion
                 n_i = [Utils.half_ceil(nx_if), Utils.half_ceil(ny_if)]
             else:
                 nx_i, m1, m2 = ESC._linear_nmax(s, W, H, thershold)
-                ny_i = Utils.half_ceil(alpha*nx_i)
+                ny_i = Utils.half_ceil(m*nx_i)
                 n_i = [nx_i, ny_i]
             
-            n = n_i
+            
+
             # Search
             # Line algorithm use
-
-            while():
-                current = ESC._dim_check(n, W, H)
+            search_points = points(n_i, line_param=[m, d], p_range=p_range, allow_cross_thick=True)
             
-            # Initial assumption:
-            # case 1 start from (2, 2)
-            # case 2 s > 30: using approximation
-            # Search:
-            #   +-1 Variations: 9- 1(current)
-            #       including previous test:  
-            n = (2, 2)
-            lim = (Wx/2, Wy/2)
-            d, x = ESC.coefficient(s, n[0], n[1], shape="R")
-            width_n = [d*(n[0]-1), d*(n[1]-1)]
-            #while( ) <- 어떻게 찾아야하는가 흠...
-            # ! 근사치가 주어져 있으니 그걸 이용해서 갯수룰 구한다음 최적화시키면 되지 !
-            #
+            measure_i =
+            n = n_i
+            for point in search_points:
+                # search routine
+            
 
         elif len(W) == 1:
             N = ESC._linear_nmax(s, W, H, thershold)
