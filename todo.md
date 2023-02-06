@@ -1,6 +1,8 @@
 
-2023-02-6
+1. add dynamic search routine to rectangular search 
 
+-----------------------
+2023-02-6
 1. Finished Line point algorithm() for Rectangular ESC n_max routine: n_max routine is not finished.
 2. OP: bc_expansion
 3. OP: linear solve -> power weight name change

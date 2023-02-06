@@ -110,7 +110,7 @@ def points(
                 pf = p_ # 2 step
                 
             p = pf
-        return np.array(points_main), np.array(points_sub)
+        return np.array(points_main)
 
 #-------------------------------------------------------------------
 # 

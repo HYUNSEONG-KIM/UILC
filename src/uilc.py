@@ -311,7 +311,11 @@ class ESC: #Expanded Sparrow Criterion
                 res = op.minimize_scalar(lambda D: ESC._rectangular(D, s, N, M), bounds=(0,1), method = "bounded")
                 cof= res.x
         return cof
-    def coefficient(s, N, M=1, shape = "L" ,approx=False):
+    def coefficient(
+        s, 
+        N, M=1, 
+        shape = "L",
+        approx=False) -> Tuple[float, float]:
         #Value check : s>= 1.0, N, M are natural numbers, shape ="L" or "R"
         #if not isinstance(s,(float, int)) or not isinstance(N, (int, np.int32)) or not isinstance(M, (int, np.int32)):
         #    message = 'Check the types of arguments s = int or float >=1, N and M = int>0 \n Current types are s={}, N ={}, M={}'.format(type(s), type(N), type(M))
@@ -334,12 +338,12 @@ class ESC: #Expanded Sparrow Criterion
         W = W[0]
         xlim = W/2
         n = 2
-        d = ESC.coefficient(s, n)*H
+        d = ESC.coefficient(s, n)[0]*H
         nxe = (n-1)/2 *d
 
         while((nxe < xlim)): # find critical 'n' fill the given region.
             n += 1
-            d = ESC.coefficient(s, n)*H
+            d = ESC.coefficient(s, n)[0]*H
             nxe = (n-1)/2 *d
             #nxm = d/2 if n%2 ==0 else d
 
@@ -347,30 +351,65 @@ class ESC: #Expanded Sparrow Criterion
         # For odd and even n, their order by requiring area can be reversed.
         # Below codes are choosing process by the given thershold value.
         n1 = n-1
-        d1 =  ESC.coefficient(s, n1)*H
+        d1 =  ESC.coefficient(s, n1)[0] *H
         n1_area = (n1-1)/2 *d1
 
         n2 = n-2
-        d2 = ESC.coefficient(s, n2)*H
+        d2 = ESC.coefficient(s, n2)[0]*H
         n2_area = (n2-1)/2 *d2
 
         n1_residual = xlim - n1_area # By the loop termination condition residuals are guaranted to be positive.
         n2_residual = xlim - n2_area
-
+        n_o_residual = math.fabs(nxe - xlim)
         #--------------------------------------------------------------------------
-        n, n_residual = (n1 ,n1_residual * thershold) if n1_residual < n2_residual else (n2 , n2_residual * thershold)
+        n_index = [n1, n2, n_o]
+        resi = [
+            n1_residual,
+            n2_residual,
+            n_o_residual
+        ]
+        thershold_conditions = [
+            n1_residual < d1 * thershold,
+            n2_residual < d2 * thershold,
+            n_o_residual < d * thershold
+        ]
 
-        n_o_residual = math.fabs(nxe - xlim) * thershold
-        if n_o_residual < d:
-            n = n if n_residual < n_o_residual else n_o
-        
-        #----------------------------
-        exceed = False
+        thers_index = []
+        for i, thershold_value in enumerate(thershold_conditions):
+            if thershold_value:
+                thers_index.append(i)
+        if len(thers_index) == 0:
+            ni, resi = (n1, n1_residual) if n1_residual < n2_residual else (n2, n2_residual)
+            n = n_o if n_o_residual < resi else ni
+            thers_condition = False
+        elif len(thers_index) >1:
+            thers_condition = True
+            j = thers_index[0]
+            n_j = n_index[j]
+            n_residual = resi[j]
+            for i in thers_index:
+                if i == j:
+                    pass
+                else:
+                    if resi[i] < n_residual:
+                        n_j = n_index[i]
+                        n_residual = resi[i]
+            n = n_j                
+        else:
+            thers_condition = True
+            n = n_index[thers_index[0]]
 
-        if nxe > xlim:
-            exceed = True
+        return (n, n, 1, thers_condition) # (nmax, n_x, n_y, thershold value satisfaction), n_x * n_y = nmax
+    def _area(s, nx, ny=1, shape = "L"):
+        dx, dy = ESC.coefficient(s, nx, ny)
+        dy = 0 if dy is None else dy
+        if shape == "L":
+            return (nx-1)*dx, 0
+        elif shape == "R" and ny >=1:
+            return (nx -1)*dx, (ny-1)*dy
+        else:
+            raise ValueError(f"shape:{shape}, ny:{ny}")
 
-        return (n, n, 1, exceed) # (nmax, n_x, n_y, exceed), n_x * n_y = nmax
 
     def _dim_check(n, W, H):
         d = H*ESC._coefficient_rectangular(s, n[0], n[1], approx=False)
@@ -378,7 +417,10 @@ class ESC: #Expanded Sparrow Criterion
         return dim_x> W[0], dim_y >W[1]
 
     def get_nmax(s, W, H, thershold = 0.3):
-        W = list(W)
+        try:
+            W = list(W)
+        except:
+            W = [W]
         if len(W) >2:
             W = W[:2]
 
@@ -386,12 +428,9 @@ class ESC: #Expanded Sparrow Criterion
             # Calculate Rectagle search routine
             Wx, Wy = W
             switch = False
-            if Wy > Wx:
-                Wx, Wy = Wy, Wy
-                switch = True
             m = Wy/Wx
             d = 0
-            p_range = (5, 5)
+            
 
             # initial point
             if s > 30:
@@ -399,21 +438,40 @@ class ESC: #Expanded Sparrow Criterion
                 nx_if, ny_if = Wx/approx_d, Wy/approx_d
                 n_i = [Utils.half_ceil(nx_if), Utils.half_ceil(ny_if)]
             else:
-                nx_i, m1, m2 = ESC._linear_nmax(s, W, H, thershold)
-                ny_i = Utils.half_ceil(m*nx_i)
-                n_i = [nx_i, ny_i]
+                #nx_i, m1, m2, thershold_condition = ESC._linear_nmax(s, W, H, thershold)
+                #ny_i = Utils.half_ceil(m*nx_i)
+                #n_i = [nx_i, ny_i]
+                if m >=1:
+                    n_i=[1, Utils.half_ceil(m)]
+                else:
+                    x = Utils.half_ceil(1/m)
+                    n_i = [x if x >=1 else 1, 1]
+                
             
+            p_range = (5, 20)
             
-
+            print(f"Inital point: {n_i}")
+            
             # Search
-            # Line algorithm use
-            search_points = points(n_i, line_param=[m, d], p_range=p_range, allow_cross_thick=True)
+            # Line algorithm: Get adjacent points of the given ratio
+            # Measuring distances from center of (Wx, Wy) plane.
+            # Pick closest point to the center on (Wx, Wy) plane.
+            points_generated = points(n_i, line_param=[m, d], p_range=p_range, allow_cross_thick=True)
+            search_points = [p for p in points_generated if p[0]>=1 and p[1]>=1]
+
+            print(search_points)
+            areas = [ESC._area(s, *point, shape = "R") for point in search_points]
+            measures = [math.sqrt( (lx*H - Wx)**2+ (ly*H-Wy)**2) for lx, ly in areas]
             
-            measure_i =
-            n = n_i
-            for point in search_points:
-                # search routine
-            
+            print(measures)
+
+            v, i = min([(val, index) for index, val in enumerate(measures)])
+            nx, ny = search_points[i]
+            esc_coef = ESC._coefficient_rectangular(s, N=nx, M=ny, approx=True)
+            thershold_condition = True
+            if math.fabs((nx-1)*esc_coef - Wx) > esc_coef*thershold or math.fabs((ny-1)*esc_coef - Wx) > esc_coef*thershold:
+                thershold_condition = False
+            N = (nx * ny, nx, ny, thershold_condition)
 
         elif len(W) == 1:
             N = ESC._linear_nmax(s, W, H, thershold)
