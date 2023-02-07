@@ -30,8 +30,8 @@ EPS = np.finfo(float).eps *1000
 
 class Radiation:
     def lambertian(s, h, d, inv=True):
-        r = 1 if inv else 0
-        return h**s/(h**2 + d)**(s/2+r)
+        r = (h**2 + d)**-1 if inv else 1
+        return r/(1 + d/(h**2))**(s/2)
     def gaussian(s, h, d, inv = False):
         r =  (1/(h**2 + d)) if inv else 1.
         return r*np.exp(- s*(np.sqrt(d)/h)**2)
@@ -97,9 +97,8 @@ class PositionArray(np.ndarray):
 
         return results[0] if len(results) == 1 else results
     #-------------------------------------------------
-
     def csym_index(N):
-        return np.array([(i-(N-1)/2)] for i in range(0, N))
+        return np.array([(i-(N-1)/2) for i in range(0, N)])
     @classmethod
     def from_arrays(cls, xarr, yarr=np.array([0.])):
         xarr = np.array(xarr)[::-1]
@@ -154,8 +153,8 @@ class PositionArray(np.ndarray):
         if math.isclose(dx, 0., abs_tol =  EPS):
             return None
         
-        xarr = dx*(np.array([(i-(N-1)/2) for i in range(0, N)]))
-        yarr = dy*(np.array([(j-(M-1)/2) for j in range(0, M)]))
+        xarr = dx*(cls.csym_index(N))
+        yarr = dy*(cls.csym_index(M))
         
         #indexing = cls([[[(i-(N-1)/2), j-(M-1)/2] for i in range(0,N)] for j in range(0,M)])
 
@@ -194,79 +193,12 @@ class PositionArray(np.ndarray):
                 result += radiation_pattern(d)
         return result
 
-class Utils: # basic Utils and functions including mathematical routines
-    def plane_meshgrid(x_range, y_range, dim):
-        xline = np.linspace(x_range[0], x_range[1], dim[0])
-        yline = np.linspace(y_range[0], y_range[1], dim[1])
-        return np.meshgrid(xline, yline)
+    @property
+    def area(self):
+        xarr = self.get_axis_list(axis = "x")
+        yarr = self.get_axis_list(axis = "y")
+        return (xarr.max()-xarr.min(), yarr.max()-yarr.min())
 
-    def evaluation_factors(arr):
-        stdE = (arr.max() - arr.min())/arr.mean() # |E_max -E_min|/E_mean
-        rmse = (arr.std())/arr.mean() # std/mean
-        return stdE, rmse
-    def half_ceil(x):
-        rho = x - math.floor(x)
-        if rho >= 0.5:
-            result = math.ceil(x)
-        else:
-            result = math.floor(x)
-        return result
-    def near_integers(x):
-        low = math.floor(x)
-        return low, low+1 
-        
-    def print_mesh_point(arr):
-        for line in arr:
-            for element in line:
-                print(f"({element[0]:.2}, {element[1]:.2})", end = "")
-            print(":\n")
-class UtilsAlgorithm:
-#=============================================================================================================================================
-    def transformMatrix(n):
-        Fd = np.array([[1 if i == j else (-1 if i-j == 1 else 0) for j in range(0,n)] for i in range(0,n)])
-        inFd =  np.array([[1 if i >= j else (0) for j in range(0,n)] for i in range(0,n)])
-
-        return Fd, inFd
-    def loc_to_diff(x, n):
-        fd, infd = UtilsAlgorithm.transformMatrix(n)
-        d= fd.dot(x)
-        w= -2*d[0]
-        d0 = d[1:]
-        m = math.floor(n/2) if n%2 == 0 else math.floor((n-1)/2)
-        #print(m)
-        return d0[0:m], w, m
-    def diff_to_loc(diff, n, w):
-        fd , infd = UtilsAlgorithm.transformMatrix(n)
-
-        if n%2 ==0:
-            m = n/2
-            d = np.append(diff, np.flip(diff[0:m]))
-        else:
-            m = (n-1)/2
-            d= np.append(diff, np.flip(diff))
-        np.insert(d, 0, -w/2)
-        return infd.dot(d)
-    #def f_residual(d, **kwargs):
-    #    W = kwargs["W"]
-    #    h = kwargs["h"]
-    #    n = kwargs["n"]
-    #    xdata = kwargs["xdata"]
-    #    ydata = kwargs["ydata"]
-    #    m = d.size
-    #    fd, infd = UtilsAlgorithm.transformMatrix(n)
-    #
-    #    if n%2 ==0:
-    #        d0 = np.append(d[0:m], np.flip(d[0:m-1]))
-    #        pass
-    #    else:
-    #        d0 = np.append(d,np.flip(d))
-    #
-    #    d0 = np.insert(d0, 0, -W/2)
-    #    xi = infd.dot(d0)
-    #
-    #    location = np.array([[[x, 0] for x in xi]])
-    #
-    #    return (ydata - Utils.gauss_distribution(xdata, np.array([[[0]]]), location,h))[0][0]
 
 class ESC: #Expanded Sparrow Criterion
     def _linear(D, s, N):
@@ -333,7 +265,6 @@ class ESC: #Expanded Sparrow Criterion
             return cof_x, cof_y
 
         raise ValueError("\"shape\" argument must be \"L\" or \"R\" current value is {}".format(shape))
-
     def _linear_nmax(s, W, H, thershold):
         W = W[0]
         xlim = W/2
@@ -410,13 +341,12 @@ class ESC: #Expanded Sparrow Criterion
         else:
             raise ValueError(f"shape:{shape}, ny:{ny}")
 
-
     def _dim_check(n, W, H):
         d = H*ESC._coefficient_rectangular(s, n[0], n[1], approx=False)
         dim_x, dim_y = d*(n[0]-1), d*(n[1]-1)
         return dim_x> W[0], dim_y >W[1]
 
-    def get_nmax(s, W, H, thershold = 0.3):
+    def get_nmax(s, W, H, shpae= "L", thershold = 0.3):
         try:
             W = list(W)
         except:
@@ -424,7 +354,7 @@ class ESC: #Expanded Sparrow Criterion
         if len(W) >2:
             W = W[:2]
 
-        if len(W) == 2: #Rectangular
+        if len(W) == 2 and shpae=="R": #Rectangular
             # Calculate Rectagle search routine
             Wx, Wy = W
             switch = False
@@ -473,19 +403,20 @@ class ESC: #Expanded Sparrow Criterion
                 thershold_condition = False
             N = (nx * ny, nx, ny, thershold_condition)
 
-        elif len(W) == 1:
-            N = ESC._linear_nmax(s, W, H, thershold)
+        elif shpae=="L":
+            Wx = [W[0]]
+            n, m, l, ther_1 = ESC._linear_nmax(s, Wx, H, thershold)
+            if len(W) ==2:
+                n2, m2, l2, ther_2 = ESC._linear_nmax(s, [W[1]], H, thershold)
+                N = (n*n2, n, n2, ther_1 != ther_2)
+            else:
+                N = (n, m, l, ther_1)
 
         return N
     
     def array(s, N, M=1, shape="L", approx=False):
         dx, dy = ESC.coefficient(s, N, M, shape, approx)
-
-        if shape == "L":
-            d= list(d)
-            dx, dy = (d[0], d[0]) if len(d) ==1 else d 
-        else:
-            dx = dy = d
+        dy = 0 if dy is None else dy
         xarr = dx* PositionArray.csym_index(N)
         yarr = dy* PositionArray.csym_index(M)
         return PositionArray.from_arrays(xarr, yarr)
@@ -546,13 +477,12 @@ class OP: #Distribution optimization including bc expansion method
                 n = n1 if di1 < di2 else n2
 
         return n
-    #--------------------------------------------------------
-    @classmethod
+
     def get_bc_expansion(
-        pq_arr, 
-        s, 
-        H, 
-        Wx,
+        pq_arr:PositionArray, 
+        s:float, 
+        H:float, 
+        Wx:float,
         Wy=0.0,
         axis=0): # axis: (0=x), (1=y), (2= x, y all)
 
@@ -684,10 +614,8 @@ class OP: #Distribution optimization including bc expansion method
             # using active set method and solve NNLS
             pass
 
-        
-
-    @classmethod
-    def solve_nnls(cls, s, W, H, n_nnls = 1, mean=True): #linear, nnls
+    
+    def solve_nnls(s, W, H, n_nnls = 1, mean=True): #linear, nnls
         d= W/n_nnls
         F = np.fromfunction(lambda i, j: Utils.intensity_function(s, H, d*i, d*j), (n_nnls,n_nnls), dtype=float)
         delta = op.nnls(F,np.ones(n_nnls))[0]
@@ -699,8 +627,8 @@ class OP: #Distribution optimization including bc expansion method
             position = position[np.argwhere(delta>therhold )[0:,0]]
             delta = delta[delta > therhold ]
         return delta, position, F
-    @classmethod
-    def nomarlization_lq(cls, arr, xdata, ydata, n, h=False, W=False):
+
+    def nomarlization_lq(arr, xdata, ydata, n, h=False, W=False):
         d, w, m = Utils.loc_to_diff(Utils.get_axis_list(arr), n)
         fd, infd = Utils.transformMatrix(n)
         if h == False:
@@ -733,3 +661,80 @@ class OP: #Distribution optimization including bc expansion method
             return False
         return sol_xarr
 
+
+
+class Utils: # basic Utils and functions including mathematical routines
+    def d2(x, y):
+        return x**2 + y**2
+    def plane_meshgrid(x_range, y_range, dim):
+        xline = np.linspace(x_range[0], x_range[1], dim[0])
+        yline = np.linspace(y_range[0], y_range[1], dim[1])
+        return np.meshgrid(xline, yline)
+
+    def evaluation_factors(arr):
+        stdE = (arr.max() - arr.min())/arr.mean() # |E_max -E_min|/E_mean
+        rmse = (arr.std())/arr.mean() # std/mean
+        return stdE, rmse
+    def half_ceil(x):
+        rho = x - math.floor(x)
+        if rho >= 0.5:
+            result = math.ceil(x)
+        else:
+            result = math.floor(x)
+        return result
+    def near_integers(x):
+        low = math.floor(x)
+        return low, low+1 
+    
+    def print_mesh_point(arr):
+        for line in arr:
+            for element in line:
+                print(f"({element[0]:.2}, {element[1]:.2})", end = "")
+            print(":\n")
+class UtilsAlgorithm:
+#=============================================================================================================================================
+    def transformMatrix(n):
+        Fd = np.array([[1 if i == j else (-1 if i-j == 1 else 0) for j in range(0,n)] for i in range(0,n)])
+        inFd =  np.array([[1 if i >= j else (0) for j in range(0,n)] for i in range(0,n)])
+
+        return Fd, inFd
+    def loc_to_diff(x, n):
+        fd, infd = UtilsAlgorithm.transformMatrix(n)
+        d= fd.dot(x)
+        w= -2*d[0]
+        d0 = d[1:]
+        m = math.floor(n/2) if n%2 == 0 else math.floor((n-1)/2)
+        #print(m)
+        return d0[0:m], w, m
+    def diff_to_loc(diff, n, w):
+        fd , infd = UtilsAlgorithm.transformMatrix(n)
+
+        if n%2 ==0:
+            m = n/2
+            d = np.append(diff, np.flip(diff[0:m]))
+        else:
+            m = (n-1)/2
+            d= np.append(diff, np.flip(diff))
+        np.insert(d, 0, -w/2)
+        return infd.dot(d)
+    def f_residual(d, **kwargs):
+        W = kwargs["W"]
+        h = kwargs["h"]
+        n = kwargs["n"]
+        xdata = kwargs["xdata"]
+        ydata = kwargs["ydata"]
+        m = d.size
+        fd, infd = UtilsAlgorithm.transformMatrix(n)
+    
+        if n%2 ==0:
+            d0 = np.append(d[0:m], np.flip(d[0:m-1]))
+            pass
+        else:
+            d0 = np.append(d,np.flip(d))
+    
+        d0 = np.insert(d0, 0, -W/2)
+        xi = infd.dot(d0)
+    
+        location = np.array([[[x, 0] for x in xi]])
+    
+        return (ydata - Utils.gauss_distribution(xdata, np.array([[[0]]]), location,h))[0][0]
