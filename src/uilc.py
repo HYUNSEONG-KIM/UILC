@@ -178,6 +178,7 @@ class PositionArray(np.ndarray):
             return self[0,0:N][0:N,0], self[0:M,0][0:M,1]
         else:
             raise ValueError("axis argument must be 'x', 0 or 'y, 1 current={}".format(axis))
+
     def to_meshgrid(self, indexing = "xy"):
         xarr = self.get_axis_list(axis = "x")
         yarr = self.get_axis_list(axis = "y")
@@ -265,6 +266,7 @@ class ESC: #Expanded Sparrow Criterion
             return cof_x, cof_y
 
         raise ValueError("\"shape\" argument must be \"L\" or \"R\" current value is {}".format(shape))
+
     def _linear_nmax(s, W, H, thershold):
         W = W[0]
         xlim = W/2
@@ -340,7 +342,6 @@ class ESC: #Expanded Sparrow Criterion
             return (nx -1)*dx, (ny-1)*dy
         else:
             raise ValueError(f"shape:{shape}, ny:{ny}")
-
     def _dim_check(n, W, H):
         d = H*ESC._coefficient_rectangular(s, n[0], n[1], approx=False)
         dim_x, dim_y = d*(n[0]-1), d*(n[1]-1)
@@ -380,7 +381,7 @@ class ESC: #Expanded Sparrow Criterion
             
             p_range = (5, 20)
             
-            print(f"Inital point: {n_i}")
+            #print(f"Inital point: {n_i}")
             
             # Search
             # Line algorithm: Get adjacent points of the given ratio
@@ -389,11 +390,11 @@ class ESC: #Expanded Sparrow Criterion
             points_generated = points(n_i, line_param=[m, d], p_range=p_range, allow_cross_thick=True)
             search_points = [p for p in points_generated if p[0]>=1 and p[1]>=1]
 
-            print(search_points)
+            # print(search_points)
             areas = [ESC._area(s, *point, shape = "R") for point in search_points]
             measures = [math.sqrt( (lx*H - Wx)**2+ (ly*H-Wy)**2) for lx, ly in areas]
             
-            print(measures)
+            # print(measures)
 
             v, i = min([(val, index) for index, val in enumerate(measures)])
             nx, ny = search_points[i]
@@ -450,16 +451,50 @@ class OP: #Distribution optimization including bc expansion method
         de = xe/H
         alpha = W/H
         return H * OP.dm(alpha, s, de, approx)
-    
+    def _r_region_x(x, s, H, W, xe, xm):
+        sgn= math.copysign(1,x)
+        x = math.fabs(x)
+        if x> W/2 or x<0:
+            raise ValueError("Argument 'x' must be in xm <= x < xe < x <= W/2 ")
+        if math.isclose(x, xe, abs_tol = EPS):
+            return None
+        if math.isclose(x, W/2, abs_tol=EPS) and x<W/2:
+            return xm
+        if x < xm: # P region
+            return W/2
+        if xm < x and x < W/2: # Q region
+            L = OP.D(x/H, W/H, s)
+            try:
+                sol = op.root_scalar(lambda xc: OP.D(xc, W/H, s) + L, bracket=[0,W/(2*H)], method="brentq")
+            except ValueError:
+                raise ValueError("x: {}, xe:{}, xm:{}".format(x, xe, xm))
+            return sol.root * H * sgn
+
+    def _get_r_points(xarr, dx, s, H, W, xe, xm, thershold=0.7):
+        x_ex = []
+        for i, x in enumerate(xarr):
+            if x > xe:
+                np.delete(xarr,i)
+            else:
+                x_new = OP._r_region_x(x,s,H,W,xe,xm)
+                if x_new is None:
+                    xarr[i] = xe
+                else:
+                    if math.fabs(x_new - x) < dx*thershold:
+                        np.delete(xarr,i)
+                        x_ex.append(xe)
+                    else:
+                        x_ex.append(x_new)
+
     #--------------------------------------------------------
-    def _bc_n_esc_max(s, H, xm, xe, status = 0): #Done, status: 0 fill Q region including P, 1: only Q
+    def fill_rq(s, H, xm, xe, status = 0): #Done, status: 0 fill Q region including P, 1: only Q
         n =2
-        d = ESC.coefficient(s, n)*H
+        d = ESC.coefficient(s, n)[0]*H
         nxe = (n-1)/2 *d
         nxm = d/2 if n%2 ==0 else d
         while((nxe < xe-d/2)):
             n += 1
-            d = ESC.coefficient(s, n)*H
+            d = ESC.coefficient(s, n)[0]*H
             nxe = (n-1)/2 *d
             nxm = d/2 if n%2 ==0 else d
             if status ==1 and nxm > xm:
@@ -467,10 +502,10 @@ class OP: #Distribution optimization including bc expansion method
             
         if nxe > xe and n > 2:
                 n1 = n-1
-                d1 =  ESC.coefficient(s, n1)*H
+                d1 =  ESC.coefficient(s, n1)[0]*H
                 nxe1 = (n1-1)/2 *d1
                 n2 = n-2
-                d2 = ESC.coefficient(s, n2)*H
+                d2 = ESC.coefficient(s, n2)[0]*H
                 nxe2 = (n2-1)/2 *d2
                 di1 = xe - nxe1
                 di2 = xe - nxe2
@@ -479,98 +514,44 @@ class OP: #Distribution optimization including bc expansion method
         return n
 
     def get_bc_expansion(
-        pq_arr:PositionArray, 
+        pq_arr:PositionArray,
         s:float, 
         H:float, 
         Wx:float,
-        Wy=0.0,
-        axis=0): # axis: (0=x), (1=y), (2= x, y all)
+        Wy:float,
+        expand=False):
 
         shape = pq_arr.shape
-        N = shape[1]
-        M = shape[0]
+        N = shape[0]
+        M = shape[1]
 
-        xarr = np.unique(Utils.get_axis_list(pq_arr, axis="x"))
-        yarr = np.unique(Utils.get_axis_list(pq_arr, axis="y"))
+        xarr = np.unique(PositionArray.get_axis_list(pq_arr, axis="x"))
+        yarr = np.unique(PositionArray.get_axis_list(pq_arr, axis="y"))
 
         dx = xarr[1] - xarr[0]
-        dy = yarr[1] - yarr[0] if M > 1 else 0
+        dy = yarr[1] - yarr[0]
         
         xe = OP.xe(s, Wx, H)
         xm = OP.xm(s, Wx, H, xe)
+        ye = OP.xe(s, Wx, H)
+        ym = OP.xm(s, Wx, H, ye)
 
-        if (xe - xarr.max()) < 0.4*dx:
-            xarr[0] = xarr[N-1] = xe\
-              
-        if dy != 0:
-            ye = OP.xe(s, Wy, H)
-            ym = OP.ym(s, Wy, H, ye)
-            if (ye - yarr.max()) < dy/2:
-                yarr[0] = yarr[N-1] = ye
-          
-        def R_region(x, s, H, W, xe, xm):
-            sgn= math.copysign(1,x)
-            x = math.fabs(x)
-            if x> W/2 or x<0:
-                raise ValueError("Argument 'x' must be in xm <= x < xe < x <= W/2 ")
-            if math.isclose(x, xe, rel_tol = EPS):
-                #return xe
-                return None
-            if math.isclose(x, W/2, rel_tol=EPS) and x<W/2:
-                return xm
-            if x < xm: # P region
-                return W/2
-            if xm < x and x < W/2: # Q region
-                L = OP.D(x/H, W/H, s)
-                try:
-                    sol = op.root_scalar(lambda xc: OP.D(xc, W/H, s) + L, bracket=[0,W/(2*H)], method="brentq")
-                except ValueError:
-                    raise ValueError("x: {}, xe:{}, xm:{}".format(x, xe, xm))
-                return sol.root * H * sgn
-        x_ex = []
-        y_ex = []
-        if axis == 0 or axis ==2:
-            for i, x in enumerate(xarr):
-                    if x > xe:
-                        np.delete(xarr,i)
-                    else:
-                        x_new = R_region(x,s,H,Wx,xe,xm)
-                        if math.fabs(x_new - x) < dx/2:
-                            np.delete(xarr,i)
-                            x_ex.append(xe)
-                        else:
-                            x_ex.append(x_new)
-                    
-        if axis == 1 or axis == 2:
-            for i, y in enumerate(yarr):
-                if y > ye:
-                    np.delete(yarr,i)
-                else:
-                    y_new = R_region(y,s,H,Wy,ye,ym)
-                    if math.fabs(y_new - y) < dy/3:
-                        np.delete(yarr, i)
-                        y_ex.append(ye)
-                    else:
-                        y_ex.append(y_new)
+        if (xe - xarr.max()) >= 0.4*dx:
+            xarr[0] = xarr[N-1] = xe
+        if (ye - yarr.max()) >= 0.4*dy:
+            yarr[0] = yarr[M-1] = ye
         
-        if len(y_ex) == 0:
-            y_ex= [0]
+        x_ex = OP._get_r_points(xarr, dx, s, H, Wx, xe, xm)
+        y_ex = OP._get_r_points(yarr, dy, s, H, Wy, ye, ym)
 
+        #-----Do below code
         x_ex =np.unique(np.array(x_ex))
         x_ex.sort()
-        y_ex = np.unique(np.array(y_ex))
-        y_ex.sort()
-
         x_arr_ex = np.append(xarr, x_ex)
-        y_arr_ex = np.append(yarr, y_ex)
-
         x_arr_ex = np.unique(np.append(-x_arr_ex,x_arr_ex))
-        y_arr_ex = np.unique(np.append(-y_arr_ex,y_arr_ex))
-
         x_arr_ex.sort()
-        y_arr_ex.sort()
 
-        return PositionArray.from_arrays(x_arr_ex, y_arr_ex)
+        return x_arr_ex
 
     def solve_linear(s, W, H, n_pre=False, k =0):
         def solve_discretized(n, s, W, H, getfd=False):
@@ -629,7 +610,7 @@ class OP: #Distribution optimization including bc expansion method
         return delta, position, F
 
     def nomarlization_lq(arr, xdata, ydata, n, h=False, W=False):
-        d, w, m = Utils.loc_to_diff(Utils.get_axis_list(arr), n)
+        d, w, m = Utils.loc_to_diff(PositionArray.get_axis_list(arr), n)
         fd, infd = Utils.transformMatrix(n)
         if h == False:
             h =  w/(1.8*n)
