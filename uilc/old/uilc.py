@@ -23,10 +23,9 @@ from typing import Tuple
 import numpy as np
 from scipy import optimize as op
 
-from .hypergeo import hyper2F1
-from .bre_line import points 
-
-EPS = np.finfo(float).eps *1000
+from uilc.utils.hypergeo import hyper2F1
+from uilc.utils.bresenham import points 
+from uilc.utils import float_eps, d2, csym_index
 
 class Radiation:
     def lambertian(s, h, d, inv=True):
@@ -38,7 +37,7 @@ class Radiation:
     def gauss_tan(s, h, d, inv=False):
         r =  (1/(h**2 + d)) if inv else 1.
         return r*np.exp(- s*(np.tan(np.abs(np.sqrt(d))/h)**2))
-    def dirac(d, ep=1000*EPS):
+    def dirac(d, ep=1000*float_eps):
         return ((np.sqrt(np.pi)*ep))**(-1) * np.exp(- d/(ep)**2)
 
 class PositionArray(np.ndarray):
@@ -97,8 +96,6 @@ class PositionArray(np.ndarray):
 
         return results[0] if len(results) == 1 else results
     #-------------------------------------------------
-    def csym_index(N):
-        return np.array([(i-(N-1)/2) for i in range(0, N)])
     @classmethod
     def from_arrays(cls, xarr, yarr=np.array([0.])):
         xarr = np.array(xarr)[::-1]
@@ -124,7 +121,6 @@ class PositionArray(np.ndarray):
         arr = np.flip(np.array(mesh).transpose(), axis=None)[::-1]
 
         return cls(np.transpose(arr, axes=(1, 0, 2)))
-    
     @classmethod
     def uniform(cls, d_t, N_t):
         if isinstance(d_t, Iterable):
@@ -150,7 +146,7 @@ class PositionArray(np.ndarray):
         
         if N == 0:
             return None
-        if math.isclose(dx, 0., abs_tol =  EPS):
+        if math.isclose(dx, 0., abs_tol =  float_eps):
             return None
         
         xarr = dx*(cls.csym_index(N))
@@ -159,12 +155,20 @@ class PositionArray(np.ndarray):
         #indexing = cls([[[(i-(N-1)/2), j-(M-1)/2] for i in range(0,N)] for j in range(0,M)])
 
         return cls.from_arrays(xarr, yarr) 
+    @classmethod
+    def uniform_fill(cls, W, N_t):
+        Nx, Ny = N_t
+        Wx, Wy = W
+
+        dx = Wx/(Nx-1)
+        dy = Wy/(Ny-1)
+
+        return cls.uniform((dx, dy), N_t)
     #---------------------------------------------------
     def check_dim(self):
         shape = self.shape
         if len(shape) != 3 or len(shape) == 3 and len(self[0][0]) !=2 :
             raise ValueError("Not a 2 dimensional array of tuple.")
-
     def get_axis_list(self, axis="x"):
         self.check_dim()
         
@@ -178,7 +182,6 @@ class PositionArray(np.ndarray):
             return self[0,0:N][0:N,0], self[0:M,0][0:M,1]
         else:
             raise ValueError("axis argument must be 'x', 0 or 'y, 1 current={}".format(axis))
-
     def to_meshgrid(self, indexing = "xy"):
         xarr = self.get_axis_list(axis = "x")
         yarr = self.get_axis_list(axis = "y")
@@ -199,7 +202,6 @@ class PositionArray(np.ndarray):
         xarr = self.get_axis_list(axis = "x")
         yarr = self.get_axis_list(axis = "y")
         return (xarr.max()-xarr.min(), yarr.max()-yarr.min())
-
 
 class ESC: #Expanded Sparrow Criterion
     def _linear(D, s, N):
@@ -333,6 +335,7 @@ class ESC: #Expanded Sparrow Criterion
             n = n_index[thers_index[0]]
 
         return (n, n, 1, thers_condition) # (nmax, n_x, n_y, thershold value satisfaction), n_x * n_y = nmax
+    
     def _area(s, nx, ny=1, shape = "L"):
         dx, dy = ESC.coefficient(s, nx, ny)
         dy = 0 if dy is None else dy
@@ -347,7 +350,7 @@ class ESC: #Expanded Sparrow Criterion
         dim_x, dim_y = d*(n[0]-1), d*(n[1]-1)
         return dim_x> W[0], dim_y >W[1]
 
-    def get_nmax(s, W, H, shpae= "L", thershold = 0.3):
+    def get_nmax(s, W, H, shape= "L", thershold = 0.3, exceed=True):
         try:
             W = list(W)
         except:
@@ -355,14 +358,13 @@ class ESC: #Expanded Sparrow Criterion
         if len(W) >2:
             W = W[:2]
 
-        if len(W) == 2 and shpae=="R": #Rectangular
+        if len(W) == 2 and shape=="R": #Rectangular
             # Calculate Rectagle search routine
             Wx, Wy = W
             switch = False
             m = Wy/Wx
             d = 0
             
-
             # initial point
             if s > 30:
                 approx_d = H * ESC._coefficient_rectangular(s, N=5, M=5, approx=True)
@@ -404,7 +406,7 @@ class ESC: #Expanded Sparrow Criterion
                 thershold_condition = False
             N = (nx * ny, nx, ny, thershold_condition)
 
-        elif shpae=="L":
+        elif shape=="L":
             Wx = [W[0]]
             n, m, l, ther_1 = ESC._linear_nmax(s, Wx, H, thershold)
             if len(W) ==2:
@@ -456,9 +458,9 @@ class OP: #Distribution optimization including bc expansion method
         x = math.fabs(x)
         if x> W/2 or x<0:
             raise ValueError("Argument 'x' must be in xm <= x < xe < x <= W/2 ")
-        if math.isclose(x, xe, abs_tol = EPS):
+        if math.isclose(x, xe, abs_tol = float_eps):
             return None
-        if math.isclose(x, W/2, abs_tol=EPS) and x<W/2:
+        if math.isclose(x, W/2, abs_tol=float_eps) and x<W/2:
             return xm
         if x < xm: # P region
             return W/2
@@ -485,6 +487,7 @@ class OP: #Distribution optimization including bc expansion method
                         x_ex.append(xe)
                     else:
                         x_ex.append(x_new)
+        return x_ex
 
     #--------------------------------------------------------
     def fill_rq(s, H, xm, xe, status = 0): #Done, status: 0 fill Q region including P, 1: only Q
@@ -544,6 +547,12 @@ class OP: #Distribution optimization including bc expansion method
         x_ex = OP._get_r_points(xarr, dx, s, H, Wx, xe, xm)
         y_ex = OP._get_r_points(yarr, dy, s, H, Wy, ye, ym)
 
+        print(f"x_ex:{x_ex}")
+        print(f"xarr:{xarr}")
+        print(f"dx:{dx}")
+        print(f"y_ex:{y_ex}")
+        print(f"yarr:{yarr}")
+        print(f"dy:{dy}")
         #-----Do below code
         x_ex =np.unique(np.array(x_ex))
         x_ex.sort()
@@ -551,7 +560,13 @@ class OP: #Distribution optimization including bc expansion method
         x_arr_ex = np.unique(np.append(-x_arr_ex,x_arr_ex))
         x_arr_ex.sort()
 
-        return x_arr_ex
+        y_ex =np.unique(np.array(y_ex))
+        y_ex.sort()
+        y_arr_ex = np.append(yarr, y_ex)
+        y_arr_ex = np.unique(np.append(-y_arr_ex,y_arr_ex))
+        y_arr_ex.sort()
+
+        return x_arr_ex, y_arr_ex
 
     def solve_linear(s, W, H, n_pre=False, k =0):
         def solve_discretized(n, s, W, H, getfd=False):
@@ -642,8 +657,6 @@ class OP: #Distribution optimization including bc expansion method
             return False
         return sol_xarr
 
-
-
 class Utils: # basic Utils and functions including mathematical routines
     def d2(x, y):
         return x**2 + y**2
@@ -672,6 +685,34 @@ class Utils: # basic Utils and functions including mathematical routines
             for element in line:
                 print(f"({element[0]:.2}, {element[1]:.2})", end = "")
             print(":\n")
+    def plot_xy_mesh(points, scale, dim):
+        scale_x, scale_y = scale
+        xi, xf, yi, yf = points
+        x_r = (scale_x * xi, scale_x * xf)
+        y_r = (scale_y * yi, scale_y * yf)
+        return Utils.plane_meshgrid(x_r, y_r, dim), [*x_r, *y_r] 
+    def data_ceiling(data, n):
+        if n <= 1:
+            raise ValueError("n must be greater than 1 and integer.")
+        d_i = data.min()
+        dn = (data.max()-data.min())/n
+        dn_add = (data.max()-data.min())/(n-1)
+        for i in range(0, n):
+            di1 = i*dn + d_i
+            di2 = di1+dn
+            data = np.where((data >= di1) & (data < di2 ), ((i))*dn_add + d_i, data)
+        return data
+    # Fix rectangle
+    def rectangle_line_points(dx, dy, Wx=None, Wy=None, wx=1, wy=1):
+        Wx = 0 if Wx is None else Wx
+        Wy = 0 if Wy is None else Wy 
+        return [
+            [[wx*(Wx-dx)/2, wx*(Wx+dx)/2],[wy*(Wy-dy)/2, wy*(Wy-dy)/2]],
+            [[wx*(Wx-dx)/2, wx*(Wx+dx)/2],[wy*(Wy+dy)/2, wy*(Wy+dy)/2]],
+            [[wx*(Wx-dx)/2, wx*(Wx-dx)/2],[wy*(Wy-dy)/2, wy*(Wy+dy)/2]],
+            [[wx*(Wx+dx)/2, wx*(Wx+dx)/2],[wy*(Wy-dy)/2, wy*(Wy+dy)/2]]
+        ]
+
 class UtilsAlgorithm:
 #=============================================================================================================================================
     def transformMatrix(n):
