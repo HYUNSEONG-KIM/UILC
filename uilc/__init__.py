@@ -1,12 +1,11 @@
 import math
 from typing import Tuple, Literal, Union
 from collections.abc import Iterable
-from copy import deepcopy
 
 import numpy as np
 from scipy.optimize import root_scalar, minimize_scalar
 
-from .utils import float_eps
+from uilc.utils.misc import float_eps, csym_index
 
 class PositionArray(np.ndarray):
     def __new__(cls, input_array, *args, **kwargs):
@@ -117,8 +116,8 @@ class PositionArray(np.ndarray):
         if math.isclose(dx, 0., abs_tol =  float_eps):
             return None
         
-        xarr = dx*(cls.csym_index(N))
-        yarr = dy*(cls.csym_index(M))
+        xarr = dx*(csym_index(N))
+        yarr = dy*(csym_index(M))
         
         #indexing = cls([[[(i-(N-1)/2), j-(M-1)/2] for i in range(0,N)] for j in range(0,M)])
 
@@ -170,3 +169,11 @@ class PositionArray(np.ndarray):
         xarr = self.get_axis_list(axis = "x")
         yarr = self.get_axis_list(axis = "y")
         return (xarr.max()-xarr.min(), yarr.max()-yarr.min())
+
+
+__all__ =[
+    "PositionArray",
+    "utils",
+    "crit",
+    "radiation"
+]
