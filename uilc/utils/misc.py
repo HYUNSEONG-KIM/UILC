@@ -41,6 +41,46 @@ def data_ceiling(data, n):
             data = np.where((data >= di1) & (data < di2 ), ((i))*dn_add + d_i, data)
         return data
 
+def extend_signal(sig, time, n=3, period=None, central=True):# not finished
+    # Argument check
+    if sig.shape != time.shape:
+        raise ValueError("Signal and Time dimensions are not same.\n sig:{}, time:{}".format(sig.shape, time.shape))
+    if len(sig) > 1:
+        raise ValueError("Only 1 dim arrays are permitted. Current:{}".format(sig.shape))
+    # Period set
+    if period is None:
+        period = time[-1]-time[0]
+    # Unit signal setting
+    time_range = time[-1]-time[0]
+    dt = time[1]- time[0]
+
+    if period < time_range:
+        if central:
+            pass
+        else:
+            sig = sig[:period]
+            time = time[:period]
+    else:
+        dn = period - time_range
+        if central:
+            fn = dn/2 if dn%2 ==0 else (dn-1)/2
+            bn = dn - fn
+            front_sig = np.zeros(shape=(fn,))
+            back_sig = np.zeros(shape=(bn,))
+            sig = np.concatenate([front_sig +sig +back_sig], axis=0)
+        else:
+            back_sig = np.zeros(shape=(dn,))
+            sig = np.concatenate([sig +back_sig], axis=0)
+
+    sigs = []
+    times = []
+    if central:
+        for i in range(0, n):
+            sigs.append(sig + )
+    else:
+        pass
+    
+
 def rectangle_line_points(dx, dy, Wx=None, Wy=None, wx=1, wy=1):
     Wx = 0 if Wx is None else Wx
     Wy = 0 if Wy is None else Wy 

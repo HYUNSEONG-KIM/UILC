@@ -156,15 +156,12 @@ def _linear_nmax(
 
 # Rectangular uniform distribution search --------------------------------------
 
-def _rect_get_next_point(pi, m ):
-    p_range = (0, 1) if dir else (1, 0)
-    main, sub = bresenham.points(pi, (m,0), p_range=p_range, allow_cross_p=True)
-    return main, sub
 # status
 a = 1 # both larger than hor and ver values of the area
 b = 0 # larger, smaller or smaller, larger
 c = -1 # both smaller than the hor and ver values of the area        
-def _rect_point_clasification(p, s, Wx, Wy):
+def _rect_point_clasification(p, s, W):
+    Wx, Wy = W
     nx, ny = p
     area_ = area(s, nx, ny, shape="R")
     x_b, y_b = area_[0] > Wx, area_[1] > Wy
@@ -177,29 +174,32 @@ def _rect_point_clasification(p, s, Wx, Wy):
         status = 0
     return status
     
-def _rect_point_residual( p, s, Wx, Wy):
+def _rect_point_residual(p, s, W):
+    Wx, Wy = W
     nx, ny = p
     area_ = area(s, nx, ny, shape="R")
     return (Wx - area_[0], Wy - area_[1])
     
-def _rect_thershold( points, s, Wx, Wy, thershold):
+def _rect_thershold(points, s, W, thershold):
     if points is None:
         return [], []
-    residual= [ _rect_point_residual(p, s ,Wx, Wy) for p in points ]
+    residual= [ _rect_point_residual(p, s, W) for p in points ]
     ds = [ coefficient(s, *p, shape="R")[0] for p in points ]
 
     point_stricted =[ p for p, resi, d in zip(points, residual, ds) if math.fabs(resi[0]) < d*thershold and math.fabs(resi[1]) < d*thershold]
-    point_unstricted =[ p for p, resi, d in zip(points, residual, ds) if (math.fabs(resi[0]) < d*thershold) != (math.fabs(resi[1]) < d*thershold)]
+    point_unstricted =[ p for p, resi, d in zip(points, residual, ds) if not (math.fabs(resi[0]) < d*thershold and math.fabs(resi[1]) < d*thershold)]
 
     return point_stricted, point_unstricted
 
-def _rect_exceed_and_thershold( points, s, Wx, Wy, thershold, permit_exceed):
+def _rect_exceed_and_thershold( points, s, W, thershold, permit_exceed):
     if not permit_exceed and points is not None:
-        residuals=[_rect_point_residual(p, s , Wx, Wy) for p in points]
+        residuals=[_rect_point_residual(p, s, W) for p in points]
         points= [p for p, resi in zip(points, residuals) if resi[0]>0 and resi[1]>0]
-    return _rect_thershold(points, s, Wx, Wy, thershold)
+    return _rect_thershold(points, s, W, thershold)
 
-def _rect_get_point_range(initiation:Tuple[Tuple[float, float], int, float], s:float, W:Tuple[float, float], iter_max = 300):
+def _rect_get_point_range(
+    initiation:Tuple[Tuple[float, float], int, float], 
+    s:float, W:Tuple[float, float], iter_max = 300):
     # Search
     # # 1. Get adjacent points near 'y = mx' line for given 'x'.
     # # 2. Calculate measure of (N_i, M_i) points at 1 -> a, b, c 
@@ -217,11 +217,9 @@ def _rect_get_point_range(initiation:Tuple[Tuple[float, float], int, float], s:f
     while(iter_i < iteration_max):
         iter_i += 1
         # Get new points and estimate them
-        #p_current, p2, p3 = bresenham.next_points(p, m, dir) # wrong
         p_current= bresenham.points(p, line_param=(m,0), p_range=p_range)[0][0]
-        #print("Iteration:",p, p_current)
-        status_current = _rect_point_clasification(p_current, s, Wx, Wy)
-        residual_current = _rect_point_residual(p_current, s, Wx, Wy)
+        status_current = _rect_point_clasification(p_current, s, [Wx, Wy])
+        residual_current = _rect_point_residual(p_current, s, [Wx, Wy])
         # Break, or manipulate direction
         if status_current != status:
             if status_current == b:
@@ -263,7 +261,8 @@ def _rect_get_point_range(initiation:Tuple[Tuple[float, float], int, float], s:f
     if iter_i >= iteration_max and point_range[0] is None:
         raise RuntimeError(f"Cannot find point in {iteration_max} iteration.")
     return point_range
-def _rectangular_nmax( # make test
+
+def _rectangular_nmax(
     s:float, 
     W:Tuple[float, float], H:float, 
     thershold:float=0.3, permit_exceed=True,
@@ -291,8 +290,8 @@ def _rectangular_nmax( # make test
         p_i[0] = half_ceil(2/m)
         p_i[1] = 2
     
-    residual_i = _rect_point_residual(p_i, s, Wx, Wy)
-    status_i = _rect_point_clasification(p_i, s, Wx, Wy)
+    residual_i = _rect_point_residual(p_i, s, [Wx, Wy])
+    status_i = _rect_point_clasification(p_i, s, [Wx, Wy])
     
     
     point_range = _rect_get_point_range((p_i, status_i, residual_i),s, W=[Wx, Wy], iter_max = iter_max)
@@ -302,21 +301,27 @@ def _rectangular_nmax( # make test
     points_main, points_sub = bresenham.points(
         pi, line_param = [m, d], 
         p_range=(2, pf[0]-pi[0]+2), allow_cross_p = True)
-    #print(points_main, points_sub)
+
     # Estimation - in progress
-    main_strict, main_unstrict = _rect_exceed_and_thershold(points_main, s, Wx, Wy, thershold, permit_exceed)
-    sub_strict, sub_unstrict = _rect_exceed_and_thershold(points_sub, s, Wx, Wy, thershold, permit_exceed)
-    #print(main_strict, main_unstrict)
-    #print(sub_strict, sub_unstrict)
+    main_strict, main_unstrict = _rect_exceed_and_thershold(points_main, s, [Wx, Wy], thershold, permit_exceed)
+    sub_strict, sub_unstrict = _rect_exceed_and_thershold(points_sub, s, [Wx, Wy], thershold, permit_exceed)
     #--------------------------------------------------------------------------
     thershold_list = main_strict + sub_strict
     unthershold_list = main_unstrict + sub_unstrict
         
     final_list = thershold_list if len(thershold_list) !=0 else unthershold_list
-    norms = [ d2(*_rect_point_residual(p, s, Wx, Wy)) for p in final_list]
-    
-    nx, ny = final_list[np.argmin(norms)]
-    return nx*ny, nx, ny, len(thershold_list) !=0
+
+    if final_list is None or len(final_list) == 0:
+        print("Stricted:-------------------------")
+        print(thershold_list)
+        print("Unstricted:-------------------------")
+        print(unthershold_list)
+
+        raise RuntimeError("Cannot find appropriate points.")
+    else:
+        norms = [ d2(*_rect_point_residual(p, s, [Wx, Wy])) for p in final_list]
+        nx, ny = final_list[np.argmin(norms)]
+        return nx*ny, nx, ny, len(thershold_list) !=0
     
 def nmax_for_region(
     s:float, 

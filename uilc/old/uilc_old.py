@@ -611,51 +611,6 @@ class OP: #Distribution optimization including bc expansion method
             pass
 
     
-    def solve_nnls(s, W, H, n_nnls = 1, mean=True): #linear, nnls
-        d= W/n_nnls
-        F = np.fromfunction(lambda i, j: Utils.intensity_function(s, H, d*i, d*j), (n_nnls,n_nnls), dtype=float)
-        delta = op.nnls(F,np.ones(n_nnls))[0]
-        position =np.array([-W/2+d/2+(i-1)*d for i in range(1,n_nnls+1)])
-        #Get meaningful points
-        if mean:
-            therhold = 0.01 * delta.max()
-            #therhold = 2* delta.mean()
-            position = position[np.argwhere(delta>therhold )[0:,0]]
-            delta = delta[delta > therhold ]
-        return delta, position, F
-
-    def nomarlization_lq(arr, xdata, ydata, n, h=False, W=False):
-        d, w, m = Utils.loc_to_diff(PositionArray.get_axis_list(arr), n)
-        fd, infd = Utils.transformMatrix(n)
-        if h == False:
-            h =  w/(1.8*n)
-        if W == False:
-            W = w
-        kwargs = {
-                    "W": W, 
-                    "h": h, 
-                    "n": n, #number of leds in bc solution
-                    "xdata": xdata, 
-                    "ydata": ydata
-                 }
-        bc_x0 = d
-
-        sol = op.least_squares(Utils.ls_f_residual, x0 =bc_x0, kwargs=kwargs)
-        if sol.status >=1:
-            
-            if n%2 ==0:
-                darr =np.append(sol.x, np.flip(sol.x[0:m-1]))
-            else:
-                darr = np.append(sol.x, np.flip(sol.x))
-
-            darr = np.insert(darr, 0, -W/2)
-            xarr = infd.dot(darr)
-            sol_xarr = np.array([[[x, 0] for x in xarr]])
-            err  = (sol_xarr[0][n-1][0]-sol_xarr[0][0][0])/2 - sol_xarr[0][n-1][0]
-            sol_xarr[0,0:n][0:n,0] = sol_xarr[0,0:n][0:n,0] + err
-        else:
-            return False
-        return sol_xarr
 
 class Utils: # basic Utils and functions including mathematical routines
     def d2(x, y):
