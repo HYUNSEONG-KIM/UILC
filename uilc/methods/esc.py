@@ -365,7 +365,9 @@ def array(s:float, N:int, M=1, shape="L", approx=False):
     _parameter_check(s, N, M)
 
     dx, dy = coefficient(s, N, M, shape, approx)
-    
+    if dy is None:
+        dy = 1
+        
     xarr = dx*csym_index(N)
     yarr = dy*csym_index(M)
     return PositionArray.from_arrays(xarr, yarr)
