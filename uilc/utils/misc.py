@@ -118,12 +118,13 @@ def extend_signal(
         else:
             back_sig = np.zeros(shape=(dn,))
             sig = np.concatenate([sig, back_sig], axis=0)
-            back_time = [dt*(i+1) + time.max() for i in range(0, n) ]
+            back_time = [dt*(i+1) + time.max() for i in range(0, dn) ]
             time = np.concatenate([time, back_time], axis=0)
 
     time = np.sort(time)
     sigs = []
     times = []
+
     for i in range(0, n):
         n_i = i+1 - n/2
         time_i = time + n_i * period

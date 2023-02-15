@@ -171,9 +171,15 @@ def signal_decomposition(sig, pos, thersholf_freq, return_type=True):
 
 def resample_n(sig, time, N, rate=240):
     W = time.max()-time.min()
-    sig_ext, time_ext = extend_signal(sig, time, n=N, period =None, central=True)
-    sig_resample = signal.resample(sig_ext, N*rate)
-    time_resample = position_array(N*W, N*rate)
+    sig_ext, time_ext = extend_signal(sig, time, n=N, period =None)
+    #sig_resample, time_resample  = signal.resample(sig_ext, N*rate, t= time_ext)
+    sig_resample  = signal.resample(sig_ext, N*rate)
+    time_resample = position_array(N*W, N*rate) - (0 if N%2 else W/2)
+
+    try:
+        time_resample -= detecting_shifted_time(time_resample, sig_resample, [-W/2, W/2])
+    except:
+        time_resample -= detecting_shifted_time(time_resample, sig_resample, [-W, W])
     return sig_resample, time_resample
 
 def signal_decomposition(sig, pos, thersholf_freq, return_type=True):
@@ -193,20 +199,72 @@ def signal_decomposition(sig, pos, thersholf_freq, return_type=True):
     else:
         return (sig_low.real, x_f), (sig_high.real, x_f)
 
+def detecting_shifted_time(xarr:np.ndarray, sig:np.ndarray, domain_range=[None,None]): # Shifted even function restoring.
+    # 1. extream detection
+    # 2. ordering by the distance from 0 point
+    d_i, d_f = domain_range
+    if d_i is not None:
+        x_index =  np.argwhere(d_i< xarr).reshape(-1)
+        xarr = xarr[x_index]
+        sig = sig[x_index]
+    if d_f is not None:
+        x_index =  np.argwhere(xarr< d_f).reshape(-1)
+        xarr = xarr[x_index]
+        sig = sig[x_index]
+
+    if d_i is not None and d_f is not None:
+        center = (d_f + d_i)/2
+    else:
+        center = 0
+    index, _ = signal.find_peaks(sig)
+
+    x_peaks = xarr[index]
+    peaks = sig[index]
+
+    index_neg = np.argwhere(x_peaks<center).reshape(-1) #index negative
+    index_pos = np.argwhere(x_peaks>center).reshape(-1) #index positiive
+
+    i_n1 = index_neg[-1]
+    i_n2 = index_neg[-2]
+    i_p0 = index_pos[0] 
+    i_p1 = index_pos[1]
+
+    p_n2 = peaks[i_n2]
+    p_n1 = peaks[i_n1]
+    p_p0 = peaks[i_p0]
+    p_p1 = peaks[i_p1]
+
+    d1 = math.fabs(p_p0 - p_n1)
+    d2 = math.fabs(p_p1 - p_n1)
+    d3 = math.fabs(p_p0 - p_n2)
+    
+    b_pos = d2<d1
+    b_neg = d3<d1
+    if len(index_neg) < len(index_pos):
+        b_neg = False
+    elif len(index_neg) > len(index_pos):
+        b_pos = False
+
+    if b_pos == b_neg:
+        i0 = i_p0
+        i1 = i_n1
+    elif b_pos:
+        i1 = i0 = i_p0
+    else:
+        i1 = i0 = i_n1
+        
+    center_shifted = (x_peaks[i0] + x_peaks[i1])/2
+
+    return center_shifted
+
+
 def get_signal_decomposition(N, s, W, H, ext_n, rate):
     delta, pos, K = power_weight(s, W, H, N, set_nmax=False)
     delta = delta/delta.max()
     sig_ext, pos_ext =resample_n(delta, pos ,ext_n, rate)
+    
     a, b = signal_decomposition(sig_ext, pos_ext, 2*np.pi/W, return_type=False) 
     sig_low, xf1 =a 
     sig_high, xf2 = b 
     return xf1, sig_low, sig_high
-
-#Extend function have a minor centering issue
-# Fix tha "uilc.utils.misc.extend_signal"
-#def get_peaks(sig, pos, distance=1):
-#    index, _ = find_peaks(sig, distance=distance)
-#    return np.array([])
-
-
 
