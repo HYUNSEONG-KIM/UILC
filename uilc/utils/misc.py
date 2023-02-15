@@ -103,7 +103,7 @@ def extend_signal(
     else:
         dn = period_n - time.shape[0]
         if dn <0 :
-            dn = 1
+            dn = 0
         if central:
             fn = int(dn/2) if dn%2 ==0 else int((dn-1)/2)
             bn = dn - fn

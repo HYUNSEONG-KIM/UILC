@@ -1,14 +1,20 @@
 import math
 from typing import Tuple, Literal, Callable
 
+from copy import deepcopy
+
 import numpy as np
 from scipy.optimize import least_squares, nnls
+from scipy.fft import fft, fftfreq, ifft
+from scipy import signal
 
 from uilc import PositionArray
-from uilc.utils.hypergeo import hyper2F1
-from uilc.utils.misc import half_ceil, d2
+from uilc.utils.hypergeo import get_mpmath_hyper
+from uilc.utils.misc import half_ceil, d2, extend_signal
 from uilc.radiation import gaussian, lambertian
 
+
+hyper2F1 = get_mpmath_hyper()
 
 # Math utils
 def diff_matrix(n:int):
@@ -47,12 +53,15 @@ def f_residual(d, **kwargs):
         return (ydata - gaussian(xdata, np.array([[[0]]]), location,h))[0][0]
 
 # Radiation matrix
+def position_array(W, n):
+    d = W/n
+    return np.array([-W/2+d/2+(i-1)*d for i in range(1,n+1)])
 def propagation_matrix(n:int, W:float, radiation:Callable[[int, int], float])->np.ndarray:
     d= W/n
     return np.fromfunction(lambda i, j: radiation(d*i, d*j), (n,n), dtype=float) 
 
 def _solve_discretized(n, s, W, H, getfd=False):
-    F = propagation_matrix(n, W, lambda i,j: lambertian(s, H, d2(i, j)))
+    F = propagation_matrix(n, W, lambda i,j: lambertian(s, H, d2(i-j,0)))
     delta = np.linalg.solve(F, np.ones(n))
     if getfd:
         return delta, F
@@ -84,11 +93,20 @@ def nmax(s:float, W:float, H:float)->int:
                 state=2
     return n
 
-def solve_nnls(s, W, H, n_nnls = 1, mean=True): #linear, nnls
-    d= W/n_nnls
-    F = propagation_matrix(n, W, lambda i,j: lambertian(s, H, d2(i, j)))
-    delta = nnls(F,np.ones(n_nnls))[0]
-    position =np.array([-W/2+d/2+(i-1)*d for i in range(1,n_nnls+1)])
+def power_weight(s, W, H, dim = 1, set_nmax = True, mean=False): #linear, nnls
+    n_max = nmax(s, W, H)
+    if set_nmax:
+        dim = n_max
+    n = dim
+    d= W/n
+    F = propagation_matrix(n, W, lambda i,j: lambertian(s, H, d2(i-j, 0)))
+    
+    if n > n_max:
+        delta = nnls(F,np.ones(n))[0]
+    else:
+        delta = np.linalg.solve(F, np.ones(n))
+
+    position =np.array([-W/2+d/2+(i-1)*d for i in range(1,n+1)])
     #Get meaningful points
     if mean:
         therhold = 0.01 * delta.max()
@@ -133,6 +151,62 @@ def nomarlization_lq(arr, xdata, ydata, n, h=False, W=False):
         return False
     return sol_xarr
 
-# FM method
-def _get_freq():
-    pass
+
+def signal_decomposition(sig, pos, thersholf_freq, return_type=True):
+    N = len(pos)
+    T = pos[1]-pos[0]
+
+    sig_f = fft(sig)
+    x_f = fftfreq(N ,T)
+
+    sig_low = deepcopy(sig_f)
+    sig_low[np.where( np.fabs(x_f) > thersholf_freq)] =  0
+    sig_high = deepcopy(sig_f)
+    sig_high[np.where( np.fabs(x_f) <= thersholf_freq)] =  0
+
+    if return_type:
+        return ifft(sig_low), ifft(sig_high)
+    else:
+        return (sig_low.real, x_f), (sig_high.real, x_f)
+
+def resample_n(sig, time, N, rate=240):
+    W = time.max()-time.min()
+    sig_ext, time_ext = extend_signal(sig, time, n=N, period =None, central=True)
+    sig_resample = signal.resample(sig_ext, N*rate)
+    time_resample = position_array(N*W, N*rate)
+    return sig_resample, time_resample
+
+def signal_decomposition(sig, pos, thersholf_freq, return_type=True):
+    N = len(pos)
+    T = pos[1]-pos[0]
+
+    sig_f = fft(sig)
+    x_f = fftfreq(N ,T)
+
+    sig_low = deepcopy(sig_f)
+    sig_low[np.where( np.fabs(x_f) > thersholf_freq)] =  0
+    sig_high = deepcopy(sig_f)
+    sig_high[np.where( np.fabs(x_f) <= thersholf_freq)] =  0
+
+    if return_type:
+        return ifft(sig_low), ifft(sig_high)
+    else:
+        return (sig_low.real, x_f), (sig_high.real, x_f)
+
+def get_signal_decomposition(N, s, W, H, ext_n, rate):
+    delta, pos, K = power_weight(s, W, H, N, set_nmax=False)
+    delta = delta/delta.max()
+    sig_ext, pos_ext =resample_n(delta, pos ,ext_n, rate)
+    a, b = signal_decomposition(sig_ext, pos_ext, 2*np.pi/W, return_type=False) 
+    sig_low, xf1 =a 
+    sig_high, xf2 = b 
+    return xf1, sig_low, sig_high
+
+#Extend function have a minor centering issue
+# Fix tha "uilc.utils.misc.extend_signal"
+#def get_peaks(sig, pos, distance=1):
+#    index, _ = find_peaks(sig, distance=distance)
+#    return np.array([])
+
+
+

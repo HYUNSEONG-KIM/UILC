@@ -16,7 +16,6 @@ def hyper2F1(a, b, c, z):
         if -1<= z:
             return sp.hyp2f1(a,b,c,z)
         if z< -1:
-
             ab_abs = math.fabs(a-b)
             ab_int = int(ab_abs)
 

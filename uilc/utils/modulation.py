@@ -27,19 +27,3 @@ def get_base_f_ds(position, y):
 
 def get_base_f_nnls(position, y):
     return 1/get_period_nnls(position, y)
-
-
-
-if __name__ == "__main__":
-    import sys, os
-    sys.path.insert(1, os.getcwd())
-    sys.path.append("..")
-
-    import src.uilc as uilc
-
-    cm = 1E-2
-    s = 30
-    W = 9*cm
-    H = 3*cm
-    ds_rho, ds_position, ds_F = uilc.disop.solve_linear(s, W, H)
-    f_b = get_base_f_ds(ds_position, ds_rho)
