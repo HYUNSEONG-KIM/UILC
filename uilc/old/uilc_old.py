@@ -269,7 +269,7 @@ class ESC: #Expanded Sparrow Criterion
 
         raise ValueError("\"shape\" argument must be \"L\" or \"R\" current value is {}".format(shape))
 
-    def _linear_nmax(s, W, H, thershold):
+    def _linear_nmax(s, W, H, threshold):
         W = W[0]
         xlim = W/2
         n = 2
@@ -284,7 +284,7 @@ class ESC: #Expanded Sparrow Criterion
 
         n_o = n
         # For odd and even n, their order by requiring area can be reversed.
-        # Below codes are choosing process by the given thershold value.
+        # Below codes are choosing process by the given threshold value.
         n1 = n-1
         d1 =  ESC.coefficient(s, n1)[0] *H
         n1_area = (n1-1)/2 *d1
@@ -303,15 +303,15 @@ class ESC: #Expanded Sparrow Criterion
             n2_residual,
             n_o_residual
         ]
-        thershold_conditions = [
-            n1_residual < d1 * thershold,
-            n2_residual < d2 * thershold,
-            n_o_residual < d * thershold
+        threshold_conditions = [
+            n1_residual < d1 * threshold,
+            n2_residual < d2 * threshold,
+            n_o_residual < d * threshold
         ]
 
         thers_index = []
-        for i, thershold_value in enumerate(thershold_conditions):
-            if thershold_value:
+        for i, threshold_value in enumerate(threshold_conditions):
+            if threshold_value:
                 thers_index.append(i)
         if len(thers_index) == 0:
             ni, resi = (n1, n1_residual) if n1_residual < n2_residual else (n2, n2_residual)
@@ -334,7 +334,7 @@ class ESC: #Expanded Sparrow Criterion
             thers_condition = True
             n = n_index[thers_index[0]]
 
-        return (n, n, 1, thers_condition) # (nmax, n_x, n_y, thershold value satisfaction), n_x * n_y = nmax
+        return (n, n, 1, thers_condition) # (nmax, n_x, n_y, threshold value satisfaction), n_x * n_y = nmax
     
     def _area(s, nx, ny=1, shape = "L"):
         dx, dy = ESC.coefficient(s, nx, ny)
@@ -350,7 +350,7 @@ class ESC: #Expanded Sparrow Criterion
         dim_x, dim_y = d*(n[0]-1), d*(n[1]-1)
         return dim_x> W[0], dim_y >W[1]
 
-    def get_nmax(s, W, H, shape= "L", thershold = 0.3, exceed=True):
+    def get_nmax(s, W, H, shape= "L", threshold = 0.3, exceed=True):
         try:
             W = list(W)
         except:
@@ -371,7 +371,7 @@ class ESC: #Expanded Sparrow Criterion
                 nx_if, ny_if = Wx/approx_d, Wy/approx_d
                 n_i = [Utils.half_ceil(nx_if), Utils.half_ceil(ny_if)]
             else:
-                #nx_i, m1, m2, thershold_condition = ESC._linear_nmax(s, W, H, thershold)
+                #nx_i, m1, m2, threshold_condition = ESC._linear_nmax(s, W, H, threshold)
                 #ny_i = Utils.half_ceil(m*nx_i)
                 #n_i = [nx_i, ny_i]
                 if m >=1:
@@ -401,16 +401,16 @@ class ESC: #Expanded Sparrow Criterion
             v, i = min([(val, index) for index, val in enumerate(measures)])
             nx, ny = search_points[i]
             esc_coef = ESC._coefficient_rectangular(s, N=nx, M=ny, approx=True)
-            thershold_condition = True
-            if math.fabs((nx-1)*esc_coef - Wx) > esc_coef*thershold or math.fabs((ny-1)*esc_coef - Wx) > esc_coef*thershold:
-                thershold_condition = False
-            N = (nx * ny, nx, ny, thershold_condition)
+            threshold_condition = True
+            if math.fabs((nx-1)*esc_coef - Wx) > esc_coef*threshold or math.fabs((ny-1)*esc_coef - Wx) > esc_coef*threshold:
+                threshold_condition = False
+            N = (nx * ny, nx, ny, threshold_condition)
 
         elif shape=="L":
             Wx = [W[0]]
-            n, m, l, ther_1 = ESC._linear_nmax(s, Wx, H, thershold)
+            n, m, l, ther_1 = ESC._linear_nmax(s, Wx, H, threshold)
             if len(W) ==2:
-                n2, m2, l2, ther_2 = ESC._linear_nmax(s, [W[1]], H, thershold)
+                n2, m2, l2, ther_2 = ESC._linear_nmax(s, [W[1]], H, threshold)
                 N = (n*n2, n, n2, ther_1 != ther_2)
             else:
                 N = (n, m, l, ther_1)
@@ -472,7 +472,7 @@ class OP: #Distribution optimization including bc expansion method
                 raise ValueError("x: {}, xe:{}, xm:{}".format(x, xe, xm))
             return sol.root * H * sgn
 
-    def _get_r_points(xarr, dx, s, H, W, xe, xm, thershold=0.7):
+    def _get_r_points(xarr, dx, s, H, W, xe, xm, threshold=0.7):
         x_ex = []
         for i, x in enumerate(xarr):
             if x > xe:
@@ -482,7 +482,7 @@ class OP: #Distribution optimization including bc expansion method
                 if x_new is None:
                     xarr[i] = xe
                 else:
-                    if math.fabs(x_new - x) < dx*thershold:
+                    if math.fabs(x_new - x) < dx*threshold:
                         np.delete(xarr,i)
                         x_ex.append(xe)
                     else:

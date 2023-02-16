@@ -5,8 +5,9 @@ import numpy as np
 from scipy.optimize import root_scalar, minimize_scalar
 
 from uilc import PositionArray
+
 from uilc.utils.misc import float_eps # constants
-from uilc.utils.misc import d2, half_ceil, csym_index # methods
+from uilc.utils.mild_math import r2, half_ceil, center_sym_index
 from uilc.utils import bresenham # module
 
 # Expanded Sparrow Criterion
@@ -97,7 +98,7 @@ def area(s:float, nx:int, ny:int=1, shape:Literal["L", "R"]="L"):
 # Linear uniform distribution search --------------------------------------
 def _linear_nmax( 
         s:float, W:float, H:float, 
-        thershold:float=0.3, permit_exceed=True
+        threshold:float=0.3, permit_exceed=True
         )->Union[int, None]:
     xlim =W/H
     n_2 = 2
@@ -136,13 +137,13 @@ def _linear_nmax(
         areas = [area for area, resi in zip(areas, residual) if resi > 0]
         residual =[resi for resi in residual if resi>0]
 
-    # thershold check
-    thersholds = [ math.fabs(resi) < thershold*d for d, resi in zip(ds, residual)]
+    # threshold check
+    thresholds = [ math.fabs(resi) < threshold*d for d, resi in zip(ds, residual)]
     residual = [math.fabs(resi) for resi in residual]
-    residual_ther =[resi for resi, thers in zip(residual, thersholds) if thers]
-    residual_not_ther =[resi for resi, thers in zip(residual, thersholds) if not thers]
-    n_ther = [ n for n, thers in zip(ns, thersholds) if thers ]
-    n_not_ther = [ n for n, thers in zip(ns, thersholds) if not thers ]
+    residual_ther =[resi for resi, thers in zip(residual, thresholds) if thers]
+    residual_not_ther =[resi for resi, thers in zip(residual, thresholds) if not thers]
+    n_ther = [ n for n, thers in zip(ns, thresholds) if thers ]
+    n_not_ther = [ n for n, thers in zip(ns, thresholds) if not thers ]
     
     if len(n_ther) != 0:
         N = n_ther[np.argmin(residual_ther)]
@@ -180,22 +181,22 @@ def _rect_point_residual(p, s, W):
     area_ = area(s, nx, ny, shape="R")
     return (Wx - area_[0], Wy - area_[1])
     
-def _rect_thershold(points, s, W, thershold):
+def _rect_threshold(points, s, W, threshold):
     if points is None:
         return [], []
     residual= [ _rect_point_residual(p, s, W) for p in points ]
     ds = [ coefficient(s, *p, shape="R")[0] for p in points ]
 
-    point_stricted =[ p for p, resi, d in zip(points, residual, ds) if math.fabs(resi[0]) < d*thershold and math.fabs(resi[1]) < d*thershold]
-    point_unstricted =[ p for p, resi, d in zip(points, residual, ds) if not (math.fabs(resi[0]) < d*thershold and math.fabs(resi[1]) < d*thershold)]
+    point_stricted =[ p for p, resi, d in zip(points, residual, ds) if math.fabs(resi[0]) < d*threshold and math.fabs(resi[1]) < d*threshold]
+    point_unstricted =[ p for p, resi, d in zip(points, residual, ds) if not (math.fabs(resi[0]) < d*threshold and math.fabs(resi[1]) < d*threshold)]
 
     return point_stricted, point_unstricted
 
-def _rect_exceed_and_thershold( points, s, W, thershold, permit_exceed):
+def _rect_exceed_and_threshold( points, s, W, threshold, permit_exceed):
     if not permit_exceed and points is not None:
         residuals=[_rect_point_residual(p, s, W) for p in points]
         points= [p for p, resi in zip(points, residuals) if resi[0]>0 and resi[1]>0]
-    return _rect_thershold(points, s, W, thershold)
+    return _rect_threshold(points, s, W, threshold)
 
 def _rect_get_point_range(
     initiation:Tuple[Tuple[float, float], int, float], 
@@ -265,7 +266,7 @@ def _rect_get_point_range(
 def _rectangular_nmax(
     s:float, 
     W:Tuple[float, float], H:float, 
-    thershold:float=0.3, permit_exceed=True,
+    threshold:float=0.3, permit_exceed=True,
     iter_max = 300
     ):
     # This function search point range 
@@ -303,31 +304,31 @@ def _rectangular_nmax(
         p_range=(2, pf[0]-pi[0]+2), allow_cross_p = True)
 
     # Estimation - in progress
-    main_strict, main_unstrict = _rect_exceed_and_thershold(points_main, s, [Wx, Wy], thershold, permit_exceed)
-    sub_strict, sub_unstrict = _rect_exceed_and_thershold(points_sub, s, [Wx, Wy], thershold, permit_exceed)
+    main_strict, main_unstrict = _rect_exceed_and_threshold(points_main, s, [Wx, Wy], threshold, permit_exceed)
+    sub_strict, sub_unstrict = _rect_exceed_and_threshold(points_sub, s, [Wx, Wy], threshold, permit_exceed)
     #--------------------------------------------------------------------------
-    thershold_list = main_strict + sub_strict
-    unthershold_list = main_unstrict + sub_unstrict
+    threshold_list = main_strict + sub_strict
+    unthreshold_list = main_unstrict + sub_unstrict
         
-    final_list = thershold_list if len(thershold_list) !=0 else unthershold_list
+    final_list = threshold_list if len(threshold_list) !=0 else unthreshold_list
 
     if final_list is None or len(final_list) == 0:
         print("Stricted:-------------------------")
-        print(thershold_list)
+        print(threshold_list)
         print("Unstricted:-------------------------")
-        print(unthershold_list)
+        print(unthreshold_list)
 
         raise RuntimeError("Cannot find appropriate points.")
     else:
-        norms = [ d2(*_rect_point_residual(p, s, [Wx, Wy])) for p in final_list]
+        norms = [ r2(*_rect_point_residual(p, s, [Wx, Wy])) for p in final_list]
         nx, ny = final_list[np.argmin(norms)]
-        return nx*ny, nx, ny, len(thershold_list) !=0
+        return nx*ny, nx, ny, len(threshold_list) !=0
     
 def nmax_for_region(
     s:float, 
     W:Union[float, Tuple[float, float]], H:float, 
     shape:Literal["L", "R"] = "L", 
-    thershold:float = 0.3,
+    threshold:float = 0.3,
     permit_exceed:bool = True
     ) -> Tuple[int, int, int, bool]:
 
@@ -343,10 +344,10 @@ def nmax_for_region(
             Wy = None
 
         if shape == "L":
-            n1, m1, l1, ther_1 = _linear_nmax(s, Wx, H, thershold, permit_exceed)
+            n1, m1, l1, ther_1 = _linear_nmax(s, Wx, H, threshold, permit_exceed)
             N = (n1, m1, l1, ther_1)
             if Wy is not None:
-                n2, m2, l2, ther_2 = _linear_nmax(s, Wy, H, thershold, permit_exceed)
+                n2, m2, l2, ther_2 = _linear_nmax(s, Wy, H, threshold, permit_exceed)
                 N = (m1 * m2, m1, m2, ther_1 and ther_2)
         elif shape =="R":
             if Wy is None:
@@ -355,7 +356,7 @@ def nmax_for_region(
             if Wy > Wx:
                 Wx, Wy = Wy, Wx
                 switch = True
-            nm, n, m, ther = _rectangular_nmax(s, (Wx, Wy), H, thershold, permit_exceed)
+            nm, n, m, ther = _rectangular_nmax(s, (Wx, Wy), H, threshold, permit_exceed)
             N = (nm, m, n , ther) if switch else (nm, n, m, ther)
         else:
             raise ValueError(f"\"shape\" must be \"L\" or \"R\" current:{shape}")
@@ -368,7 +369,7 @@ def array(s:float, N:int, M=1, shape="L", approx=False):
     if dy is None:
         dy = 1
         
-    xarr = dx*csym_index(N)
-    yarr = dy*csym_index(M)
+    xarr = dx*center_sym_index(N)
+    yarr = dy*center_sym_index(M)
     return PositionArray.from_arrays(xarr, yarr)
       

@@ -39,12 +39,14 @@ def plane_meshgrid(x_range, y_range, dim):
     xline = np.linspace(x_range[0], x_range[1], dim[0])
     yline = np.linspace(y_range[0], y_range[1], dim[1])
     return np.meshgrid(xline, yline)
+
 def plot_xy_mesh(points, scale, dim):
         scale_x, scale_y = scale
         xi, xf, yi, yf = points
         x_r = (scale_x * xi, scale_x * xf)
         y_r = (scale_y * yi, scale_y * yf)
         return plane_meshgrid(x_r, y_r, dim), [*x_r, *y_r] 
+
 def csym_index(N):
     return np.array([(i-(N-1)/2) for i in range(0, N)])
 
@@ -58,6 +60,7 @@ def half_ceil(x):
 def near_integers(x):
         low = math.floor(x)
         return low, low+1 
+        
 def data_ceiling(data, n):
         if n <= 1:
             raise ValueError("n must be greater than 1 and integer.")

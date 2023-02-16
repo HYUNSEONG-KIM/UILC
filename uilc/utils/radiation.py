@@ -1,0 +1,40 @@
+import numpy as np
+from uilc.utils.misc import float_eps
+
+# Basic functions
+def gaussian(x, mu, rho):
+    return (1/(rho * np.sqrt(2 * np.pi)))*np.exp(- 0.5*((x-mu)/rho)**2)
+def dirac(x, ep=1E3*float_eps):
+    # Gaussian dirac sequence approximation
+    return ((np.sqrt(np.pi)*ep))**(-1) * np.exp(- (x/ep)**2)
+def kronecker_delta(i, j):
+    return 1 if i==j else 0
+
+# On plane
+# x: source plane
+# t: above plane
+def inverse_law(x, t, H):
+    return (H**2 + (x-t)**2)**-1
+
+def lambertian(x, t, s, H):
+    k = (x-t)/H
+    base = (H**2)*(1 + k**2)**(s/2 +1)
+    return np.power(base, -1)
+
+def gauss_tan_radi(x, t, s, h):
+    r =  (1/(h**2 + (x-t)**2))
+    return r*np.exp(- s*(np.tan((x-t)/h)**2))
+
+def gauss_radi(x, t, s, h, inv = False):
+    r =  (1/(h**2 + (x-t)**2)) if inv else 1.
+    return r*np.exp(- s*((x-t)/h)**2)
+
+def lambertian_convolve_1d(
+    xarr:np.ndarray, 
+    sources:np.ndarray, 
+    s:float, 
+    H:float):
+    result = np.zeros(xarr.shape)
+    for s in sources:
+        result += H**s/((s - xarr)**2 + H**2)**(s/2+1)
+    return result

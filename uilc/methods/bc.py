@@ -69,7 +69,7 @@ def _r_region_x(x, s, W, H, xe, xm):
             raise ValueError("x: {}, xe:{}, xm:{}".format(x, H*de, H*dm))
         return sol.root * H * sgn
 
-def _get_r_points(xarr, dx, s, W, H, xe, xm, thershold=0.7):
+def _get_r_points(xarr, dx, s, W, H, xe, xm, threshold=0.7):
     x_ex = []
     state =0
     for i, x in enumerate(xarr):
@@ -83,7 +83,7 @@ def _get_r_points(xarr, dx, s, W, H, xe, xm, thershold=0.7):
                 xarr[i] = xe
                 state = 1
             else:
-                if math.fabs(x_new - x) < dx*thershold and dx+x < W/2:
+                if math.fabs(x_new - x) < dx*threshold and dx+x < W/2:
                     np.delete(xarr,i)
                     x_ex.append(xe)
                 else:
@@ -155,18 +155,18 @@ def _rq_esc(s, W, H, th, dif_th=False)->Tuple[int, int]:
 def search_rq_fill_numbers(
     s, W, H, 
     method:Literal["uniform", "esc"]="esc", 
-    thershold = 0.35, diff_thers=False)->Tuple[int, int]:
+    threshold = 0.35, diff_thers=False)->Tuple[int, int]:
 
     if method == "uniform":
-        return _rq_uniform(s, W, H, thershold, diff_thers)
+        return _rq_uniform(s, W, H, threshold, diff_thers)
     elif method =="esc":
-        return _rq_esc(s, W, H, thershold, diff_thers)
+        return _rq_esc(s, W, H, threshold, diff_thers)
     
 
 def fill_rq(s, W, H, method:Literal["uniform", "esc"]="esc", 
-    thershold = 0.35, diff_thers=False, even=False):
+    threshold = 0.35, diff_thers=False, even=False):
 
-    n_even, n_odd = search_rq_fill_numbers(s, W, H, method, thershold, diff_thers)
+    n_even, n_odd = search_rq_fill_numbers(s, W, H, method, threshold, diff_thers)
 
     #print(n_even, n_odd)
     n = n_even if abs(n_even - n_odd) == 1 else n_odd 

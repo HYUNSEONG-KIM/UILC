@@ -141,29 +141,3 @@ def points(
             sub = None
        
         return main, sub
-#-----------------------------------------------#
-# Visualization                                 #
-#-----------------------------------------------#
-
-# from matplotlib import pyplot as plt
-# pi = [0, 0] # center point
-# ms = [ 0, 0.5, 1, 2, -0.6, -1, -3]
-# bs = [pi[1] - m*pi[0] for m in ms ]
-
-# n =30
-# x = 1.2*n
-# line_points = [[[0, x], [line(0, m, b), line(x, m, b)]] for m, b in zip(ms, bs)]
-# p_range = (30, 30)
-# int_points = [points(pi, line_param=[m, b], p_range=p_range) for m, b in zip(ms, bs)]
-# line_pixel_points = [[p[0][:-1, 0], p[0][:-1, 1]] for p in int_points]
-#
-# fig = plt.figure(figsize=(8,8))
-# ax = fig.add_subplot()
-# for l_p in line_points:
-#     ax.plot(l_p[0], l_p[1])
-# for point in line_pixel_point:
-#     ax.scatter(point[0], point[1])
-# ax.set_xlim(-(n/2+0.5), n/2+0.5)
-# ax.set_ylim(-(n/2+0.5), n/2+0.5)
-# ax.grid()
-# plt.show()
