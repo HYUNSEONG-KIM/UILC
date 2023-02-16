@@ -85,7 +85,7 @@ def power_weight(s, W, H, dim = 1, set_nmax = False, mean=False): #linear, nnls
         #therhold = 2* delta.mean()
         position = position[np.argwhere(delta>therhold )[0:,0]]
         delta = delta[delta > therhold ]
-    return delta, position, F
+    return delta, position
 
 #------------------------------------------------------------------------------
 # Binarization
@@ -264,7 +264,7 @@ def detecting_shifted_time(
     return center_shifted
 
 def get_signal_decomposition(N, s, W, H, ext_n, rate):
-    delta, pos, K = power_weight(s, W, H, N, set_nmax=False)
+    delta, pos = power_weight(s, W, H, N, set_nmax=False)
     delta = delta/delta.max()
     sig_ext, pos_ext =resample_n(pos, delta, ext_n, rate)
     
@@ -275,6 +275,27 @@ def get_signal_decomposition(N, s, W, H, ext_n, rate):
     sig_high, xf2 = b 
     return xf1, sig_low, sig_high
 
+
+def nlimt(s, W, H):
+    n_max = nmax(s, W, H)
+    n = n_max
+    dn = 0
+    while(True):
+        x, sig_low_f, sig_high_f = get_signal_decomposition(n, s, W, H, ext_n=10, rate= 480)
+        n_high_freq = len(np.where(sig_high_f >sig_low_f[2:].max()*0.01)[0])
+        if n_high_freq ==0:
+            if dn == -1:
+                n += 1
+                break
+            dn = 1
+        else:
+            if dn == 1:
+                n -= 1
+                break
+            dn = -1
+
+        n += dn
+    return n
 
 
 def fourier_binarization(
