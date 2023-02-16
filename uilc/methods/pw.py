@@ -202,13 +202,19 @@ def resample_n(time:np.ndarray, sig:np.ndarray, N:int, rate=240):
     sig_resample  = signal.resample(sig_ext, N*rate)
     time_resample = position_array(N*W, N*rate) - (0 if N%2 else W/2)
 
-    try:
-        time_resample -= detecting_shifted_time(time_resample, sig_resample, [-W/2, W/2])
-    except IndexError:
-        try:
-            time_resample -= detecting_shifted_time(time_resample, sig_resample, [-W, W])
-        except:
-            pass
+    time_resample, sig_resample = signal_cutting(time_resample, sig_resample, [-W, W])
+
+    dt = detecting_shifted_time_max(time_resample, sig_resample)
+    if dt is None:
+        dt = 0
+    #try:
+    #     dt = detecting_shifted_time(time_resample, sig_resample, [-W/2, W/2])
+    #except IndexError:
+    #    try:
+    #        dt = detecting_shifted_time(time_resample, sig_resample, [-W, W])
+    #    except:
+    #        pass
+    time_resample = time_resample - dt
     return sig_resample, time_resample
 
 def detecting_shifted_time(
@@ -262,6 +268,19 @@ def detecting_shifted_time(
     center_shifted = (x_peaks[i0] + x_peaks[i1])/2
 
     return center_shifted
+
+def detecting_shifted_time_max(time:np.ndarray, sig:np.ndarray):
+    sig_max = sig.max()
+
+    index_peaks, _ = signal.find_peaks(sig, height = 0.95*sig_max)
+
+    if len(index_peaks) <2:
+        return None
+    else:
+        i1 = index_peaks[0]
+        i2 = index_peaks[1]
+
+        return (time[i1] + time[i2])/2
 
 def get_signal_decomposition(N, s, W, H, ext_n, rate):
     delta, pos = power_weight(s, W, H, N, set_nmax=False)
