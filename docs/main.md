@@ -223,9 +223,17 @@ The system we considering is a positive system whose all elements are positive, 
 
 $$\text{diag}(\mathbf{R}) = max(\mathbf{R}) \cdot \vec{1}^t$$
 
-Use of Kaykobad's theorey and left-right rectangular approximation, (only for center dominant function),
+For symmetric positive system, using Kaykobad's theory next condition guarantes the positive solution of the system,
 
-$$\Delta_n \geq  2 \cdot \int_{W/(2H n)}^{W/(2H)} R_h(x)  dx \geq max(\sum_{i=1, i\neq j}^n \frac{\mathbf{R}_{ij}}{\mathbf{R}_{ii}}, j=[1,n]) \cdot \Delta_n$$
+$$1 \geq   max(\sum_{i=1, i\neq j}^n \frac{\mathbf{R}_{ij}}{\mathbf{R}_{ii}}, j=[1,n]) $$
+
+In addition, with rectangular approximation for integration we can get next,
+
+$$2 \cdot \int_{W/(2H n)}^{W/(2H)} R_h(x)  dx \geq   max(\sum_{i=1, i\neq j}^n \frac{\mathbf{R}_{ij}}{\mathbf{R}_{ii}}, j=[1,n]) \cdot \Delta_n$$
+
+Combining above two inequalities, we get next condition for dimension $n$ which provides the positive solution.
+
+$$\Delta_n \geq  2 \cdot \int_{W/(2H n)}^{W/(2H)} R_h(x)  dx$$
 
 Thus,
 
@@ -233,7 +241,7 @@ $$\frac{W}{2 \cdot \int_{W/(2H n)}^{W/(2H)} R_h(x)  dx} \geq n$$
 
 For Lambertian case, we can get approximated dimension that guarantee that positive solution of system,
 
-$$\int_{-t}^t \frac{1}{(1+x^2)^{s/2+1}} dx = t {}_2F_1 \left(\frac{1}{2};\frac{s+2}{2} ;  \frac{3}{2}; -t^2 \right)$$
+$$\int_{-t}^t \frac{1}{(1+x^2)^{s/2+1}} dx =(2 t) {}_2F_1 \left(\frac{1}{2};\frac{s+2}{2} ;  \frac{3}{2}; -t^2 \right)$$
 
 ${}_2 F_1$ is a Gausse hypergeometric function,
 
