@@ -77,10 +77,17 @@ $$1 \geq (1+t^{2n})^{-\frac{1}{2n}}\\ \geq {}_2F_1 \left(\frac{1}{2n}, b, \frac{
 
 
 $$\frac{d}{dt}{}_2F_1 \left(\frac{1}{2n}, b, \frac{1}{2n}+1; -t^{2n}  \right) = -2n t \cdot {}_2F_1^{(1)} \left(\frac{1}{2n}, b, \frac{1}{2n}+1; -t^{2n}  \right)\\
-= -2n t \left({}_2F_1 \left(\frac{1}{2n}+1, b, \frac{1}{2n}+1; -t^{2n}  \right)  - {}_2F_1 \left(\frac{1}{2n}, b, \frac{1}{2n}+1; -t^{2n}  \right)\right) \\
-= -2n t \left( (1+t^{2n})^{-b}- {}_2F_1 \left(\frac{1}{2n}, b, \frac{1}{2n}+1; -t^{2n}  \right)\right)
+= \frac{1}{t} \left(\left(1+t^{2 n}\right)^{-b} - _2F_1\left(b,\frac{1}{2 n};1+\frac{1}{2 n};-t^{2 n}\right)\right) \\
 $$
 
 $$\because   {}_2F_1(a, b, c ; z) = (1-z)^{-b} {}_2F_1(c-a, b, c ;\frac{z}{z-1}) $$
 
-$$= \frac{2n \cdot t} {(1+t^{2n})^{b}} \left( {}_2F_1 \left(1, b, \frac{1}{2n}+1; \frac{t^{2n}}{1+ t^{2n}}  \right) - 1\right) $$
+$$\frac{d}{dt}{}_2F_1 \left(\frac{1}{2n}, b, \frac{1}{2n}+1; -t^{2n}  \right) = \frac{1} {t(1+t^{2n})^{b}} \left( 1 - {}_2F_1 \left(1, b, \frac{1}{2n}+1; \frac{t^{2n}}{1+ t^{2n}}  \right) \right) $$
+
+Since ${}_2F_1 \left(1, b, \frac{1}{2n}+1; \frac{t^{2n}}{1+ t^{2n}}  \right) \geq 1,  \forall t >0$, $f(t) = {}_2F_1 \left(\frac{1}{2n}, b, \frac{1}{2n}+1; -t^{2n}  \right)$ is monotonic decreasing $t >0$ and bounded $0 \leq {}_2F_1 \leq 1$.
+
+That is, 
+
+$$f(n) := \frac{0.5 + {}_2F_1 \left(\frac{1}{2}, \frac{s+2}{2}, \frac{3}{2}; -\frac{W}{2Hn}^{2}  \right)}{{}_2F_1 \left(\frac{1}{2}, \frac{s+2}{2}, \frac{3}{2}; -\frac{W}{2H}^{2} \right)} \leq \frac{1.5}{{}_2F_1 \left(\frac{1}{2}, \frac{s+2}{2}, \frac{3}{2}; -\frac{W}{2H}^{2} \right)}$$
+
+$$n_{max} \approx \left\lfloor{\frac{1.5}{{}_2F_1 \left(\frac{1}{2}, \frac{s+2}{2}, \frac{3}{2}; -\frac{W}{2H}^{2} \right)}}\right\rfloor$$

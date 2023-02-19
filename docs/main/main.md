@@ -1,4 +1,4 @@
-
+# LED design for uniform illumination area of rectangular shape
 
 ## Basic terminologies and functions.
 
@@ -152,7 +152,7 @@ This integral equation is a Fredholem integral equation of first kind, since it 
 
 In this case, to get an approximation of system , we can matrize above system. 1-dim convolution equation could be directly transformed to simple linear equation with discretization.
 
-Let, for $i = \N^+ \backslash \{0 \} $,
+Let, for $i = \N^+ \backslash \{0 \}$,
 $$\Delta_n = \frac{W}{n}$$
 $$x_i = t_i = -\frac{W}{2} + \frac{1}{2}\Delta_n + (i-1) \Delta_n$$
 
@@ -171,7 +171,7 @@ $$\mathbf{R}\vec{t} = \vec{i} = c \vec{1}$$
 
 The ideal solution for system is zero-one solution  which is $\vec{t}_i = \{0, 1\} \forall i \in[1, n]$. However, this is one example of NP-hard problem in computation, no standard algorithm exists. Focusing on weight of each points in space, then the positivness, where $\vec{t}_i \geq 0,   \forall i \in[1, n]$, is enough to get approximation. 
 
-#### Positiveness of system
+#### **Positiveness of system**
 
 With NNLS method the positive approximation is easily achieved but, the solvability and positiveness of system must be discussed. 
 
@@ -189,6 +189,7 @@ By the definitions, the system is solvable and there exist unique solution. Ther
 
 Now the remained property is positiveness. Kaykobad studied conditions of positive solution of positive system. 
 
+> M. Kaykobad, Positive solutions of positive linear systems, Linear Algebra and its Applications, Volume 64, January 1985, pp 133-140, doi:10.1016/0024-3795(85)90271-X
 
 <table style="border-radius:8px;width:100%;">
 <th style="text-align:center;background-color:rgb(0, 0, 0); color:white; border-top-left-radius: 10px;width:20%;">
@@ -223,15 +224,15 @@ The system we considering is a positive system whose all elements are positive, 
 
 $$\text{diag}(\mathbf{R}) = max(\mathbf{R}) \cdot \vec{1}^t$$
 
-For symmetric positive system, using Kaykobad's theory next condition guarantes the positive solution of the system,
+For symmetric positive system with $\vec{\beta} = \vec{1}$, using Kaykobad's theory next condition guarantees the positive solution of the system,
 
 $$1 \geq   max(\sum_{i=1, i\neq j}^n \frac{\mathbf{R}_{ij}}{\mathbf{R}_{ii}}, j=[1,n]) $$
 
-In addition, with rectangular approximation for integration we can get next,
+In addition, with rectangular approximation of integration we can get next,
 
 $$2 \cdot \int_{W/2n}^{W/2} \frac{1}{max(R_h(x))}R_h(x)  dx \geq   max(\sum_{i=1, i\neq j}^n \frac{\mathbf{R}_{ij}}{\mathbf{R}_{ii}}, j=[1,n]) \cdot \Delta_n$$
 
-Combining above two inequalities, we get next condition for dimension $n$ which provides the positive solution.
+Combining above two inequalities yields next inequality for the dimension $n$ which provides the positive solution of system.
 
 $$\Delta_n \geq  2 \cdot \int_{W/2n}^{W/2} \frac{1}{max(R_h(x))} R_h(x)  dx$$
 
@@ -243,18 +244,36 @@ For Lambertian case, we can get approximated dimension that guarantee that posit
 
 $$\int_{-t}^t \frac{1}{(1+x^2)^{s/2+1}} dx =(2 t) {}_2F_1 \left(\frac{1}{2};\frac{s+2}{2} ;  \frac{3}{2}; -t^2 \right)$$
 
-${}_2 F_1$ is a Gausse hypergeometric function,
+${}_2 F_1$ is a Gausse hypergeometric function. 
 
-$$ \frac{1/2 + {}_2F_1 \left(\frac{1}{2};\frac{s+2}{2} ;  \frac{3}{2}; -\frac{W^2}{4 H^2} \frac{1}{n^2} \right)}{{}_2F_1 \left(\frac{1}{2};\frac{s+2}{2} ;  \frac{3}{2}; -\frac{W^2}{4 H^2} \right)} \geq n$$
+Evaluating inequality, we get an inequality of the dimension of the system for positive solution,
 
-$$$$
+$$f(s, \alpha, n) := \frac{1/2 + {}_2F_1 \left(\frac{1}{2};\frac{s+2}{2} ;  \frac{3}{2}; -\frac{\alpha^2}{4 n^2}\right)}{{}_2F_1 \left(\frac{1}{2};\frac{s+2}{2} ;  \frac{3}{2}; -\frac{\alpha^2}{4} \right)}$$
+
+$$ f(s, \alpha, n) \geq n$$
+
+The left function, $f(s, \alpha, n)$, is monotonic increasing function with upper bound as $n$ increasing, (See `nmax.md`).
+
+$$n_{max} \leq \sup{f(s, \alpha, n) } = \frac{1.5}{{}_2F_1 \left(\frac{1}{2}, \frac{s+2}{2}, \frac{3}{2}; -\frac{W}{2H}^{2} \right)}$$
+
+---
+
+With active set method and Non-negative least square optimization, we can get positive optimizated solution for system of arbitary dimension, but as far from the dimension, $n_{max}$, nosiy signal will occured between dominant positions of source in solution. Practically, we want to find minimum number of sources generate uniform illumination on rectangular plane. 
+
+We can treat the solution as space-weight signal. Then, we can divide the solution.
+Even we get a high nosied solution for higher dimension of system, passing thorough low pass filter with blocking value $[-f_{max}, f_{max}]$, where $f_{max} = \frac{2\pi}{W}$, provide us some constant solution for given optimization parameter no matter how dimension are changed.
+
+### 2 dim case
+
+The general case is 2 dimension convolution and it is the original problem we want to solve. Luckily, the convolution transform is one of linear transform. Therefore, we can construct some linear system corresponding to each convolution system,
+
+$$\mathbf{A} * \mathbf{X} = \lambda \mathbf{1} \Leftrightarrow \mathbf{A}'  \vec{x} = \lambda \vec{1}$$
 
 
-From the 
+where, $\mathbf{A} \in M_{k \times k }(\R^+)$, $\mathbf{X} \in M_{n \times n}(\R^+)$, $\mathbf{1} \in (\R^+)^n$, and
+$\mathbf{A'} \in M_{m \times m}(\R^+)$, $\vec{x} \in (\R^+)^m$ , $\vec{\mathbf{1}} \in (\R^+)^m$ for $\lambda >0, k = 2n-1, m = n^2$.
 
-With active set method and Non-negative least square optimization, we can get positive optimizated solution for system, but 
-
-
+---
 
 >Optical design of a compact multispectral LED light source with high irradiance and uniformity
 
