@@ -152,7 +152,7 @@ This integral equation is a Fredholem integral equation of first kind, since it 
 
 In this case, to get an approximation of system , we can matrize above system. 1-dim convolution equation could be directly transformed to simple linear equation with discretization.
 
-Let, 
+Let, for $i = \N^+ \backslash \{0 \} $,
 $$\Delta_n = \frac{W}{n}$$
 $$x_i = t_i = -\frac{W}{2} + \frac{1}{2}\Delta_n + (i-1) \Delta_n$$
 
@@ -177,7 +177,7 @@ With NNLS method the positive approximation is easily achieved but, the solvabil
 
 The association function $R_h(x,t): \mathbb{R} \times \mathbb{R} \rightarrow \mathbb{R}$ with Lambertian radiation pattern is 
 
-$$R_h(x,t) = \frac{1}{H} (1+ (\frac{x-t}{H})^2 )^{-s/2 +1}$$
+$$R_h(x,t) = \frac{1}{H} (1+ (\frac{x-t}{H})^2 )^{-(s/2 +1)}$$
 
 This is an *inverse multiquadratics* and strictly positive definite function, whem $\frac{s+2}{2} >1$ and by the definition of Lambertian, $s \leq 1$, this condition always achieved.
 
@@ -229,15 +229,15 @@ $$1 \geq   max(\sum_{i=1, i\neq j}^n \frac{\mathbf{R}_{ij}}{\mathbf{R}_{ii}}, j=
 
 In addition, with rectangular approximation for integration we can get next,
 
-$$2 \cdot \int_{W/(2H n)}^{W/(2H)} R_h(x)  dx \geq   max(\sum_{i=1, i\neq j}^n \frac{\mathbf{R}_{ij}}{\mathbf{R}_{ii}}, j=[1,n]) \cdot \Delta_n$$
+$$2 \cdot \int_{W/2n}^{W/2} \frac{1}{max(R_h(x))}R_h(x)  dx \geq   max(\sum_{i=1, i\neq j}^n \frac{\mathbf{R}_{ij}}{\mathbf{R}_{ii}}, j=[1,n]) \cdot \Delta_n$$
 
 Combining above two inequalities, we get next condition for dimension $n$ which provides the positive solution.
 
-$$\Delta_n \geq  2 \cdot \int_{W/(2H n)}^{W/(2H)} R_h(x)  dx$$
+$$\Delta_n \geq  2 \cdot \int_{W/2n}^{W/2} \frac{1}{max(R_h(x))} R_h(x)  dx$$
 
 Thus,
 
-$$\frac{W}{2 \cdot \int_{W/(2H n)}^{W/(2H)} R_h(x)  dx} \geq n$$
+$$\frac{W}{2 \cdot \int_{W/(2n)}^{W/(2)} R_h(x)  dx} \geq n$$
 
 For Lambertian case, we can get approximated dimension that guarantee that positive solution of system,
 
@@ -245,7 +245,7 @@ $$\int_{-t}^t \frac{1}{(1+x^2)^{s/2+1}} dx =(2 t) {}_2F_1 \left(\frac{1}{2};\fra
 
 ${}_2 F_1$ is a Gausse hypergeometric function,
 
-$$ \frac{2 + {}_2F_1 \left(\frac{1}{2};\frac{s+2}{2} ;  \frac{3}{2}; -\frac{W^2}{4 H^2} \frac{1}{n^2} \right)}{{}_2F_1 \left(\frac{1}{2};\frac{s+2}{2} ;  \frac{3}{2}; -\frac{W^2}{4 H^2} \right)} \geq n$$
+$$ \frac{1/2 + {}_2F_1 \left(\frac{1}{2};\frac{s+2}{2} ;  \frac{3}{2}; -\frac{W^2}{4 H^2} \frac{1}{n^2} \right)}{{}_2F_1 \left(\frac{1}{2};\frac{s+2}{2} ;  \frac{3}{2}; -\frac{W^2}{4 H^2} \right)} \geq n$$
 
 $$$$
 
