@@ -1,6 +1,23 @@
 from typing import Tuple, Literal, Callable
 
 import numpy as np
+from numpy.lib.stride_tricks import as_strided
+
+def toeplitz(c, r):
+    # Imgrated source code from scipy `toeplitz` function
+    # BSD-licensed
+    c = np.asarray(c).ravel()
+    if r is None:
+        r = c.conjugate()
+    else:
+        r = np.asarray(r).ravel()
+    # Form a 1-D array containing a reversed c followed by r[1:] that could be
+    # strided to give us toeplitz matrix.
+    vals = np.concatenate((c[::-1], r[1:]))
+    out_shp = len(c), len(r)
+    n = vals.strides[0]
+    return as_strided(vals[len(c)-1:], shape=out_shp, strides=(-n, n)).copy()
+
 
 
 def convolution2d(  
