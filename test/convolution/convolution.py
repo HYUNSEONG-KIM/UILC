@@ -20,6 +20,18 @@ def toeplitz(c, r):
 
 
 
+def _expand_matrix(data, dim_kernel, dim_crop, edge_param):
+    n, m = data.shape
+    l, k = dim_kernel
+    cr, cc = dim_crop
+
+    e_method_name, e_method_param = edge_param
+
+    er = l - cr
+    ec = k -cc
+
+    return None
+
 def convolution2d(  
     data:np.ndarray, 
     filter:np.ndarray,
@@ -29,6 +41,8 @@ def convolution2d(
     ):
 
     data.shape
+
+    return None
 
 def convert_to_toeplitz_system(data, filter, 
     boundary_cropping:Tuple[int, int]=(1, 1),
@@ -43,6 +57,7 @@ def toeplitz_to_convolution2d(
     dim=Tuple[int,int, int, int]
     ):
     pass
+return None
 
 def convolve_dimension(  
     data:np.ndarray, 
