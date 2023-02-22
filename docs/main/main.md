@@ -142,15 +142,23 @@ $$c = \int_{-W_l/2}^{W_l/2} \int_{-W_t/2}^{W_t/2} R_h(x_i - t, y_i - l) \rho(t, 
 
 Utilizing dirac-delta distribution yields next approximation,
 
-$$\rho(t, l) = \sum_{i=1}^N \delta(t- t_i, l-l_i) =\sum_{i=1}^N \delta(t- t_i) \delta( l-l_i)  $$
+$$\rho(t, l) = \sum_{i=1}^N \delta(t- t_i, l-l_i) =\sum_{i=1}^N \delta(t- t_i) \delta( l-l_i)$$
 
 ### 1 dim case
 
-$$c  = \int_{-W_t/2}^{W_t/2} R_h(x_i - t) \rho(t) dt$$
+Suppose that the distribution $\rho(x,y)$ is separable. 
+That is,
 
-This integral equation is a Fredholem integral equation of first kind, since it has a difference kernel, $R_h$, by the choice of radiation pattern, Fourier transform method can be used to get solution. Unfortunately, centeral dominant radiation pattern like Lambertian or Gaussian, the solution function on frequncy domain diverges as $|\omega| \rightarrow \infty$ which is invaild Dirichlet's conditions. Therefore, we cannot get exact distribution from equation. 
+$$\rho(x,y) = \rho(x) \cdot \rho(y)$$
 
-In this case, to get an approximation of system , we can matrize above system. 1-dim convolution equation could be directly transformed to simple linear equation with discretization.
+For separable input the higher dimension convolution is decomposed into products of 1-dim convolutions.
+
+$$c  = \left(\int_{-W_l
+/2}^{W_l/2} R_h(y_j - l) \rho(l) dl \right) \cdot \left(\int_{-W_t/2}^{W_t/2} R_h(x_i - t) \rho(t) dt \right)  $$
+
+This integral equation is a Fredholem integral equation of first kind, since it has a difference kernel, $R_h$, by the choice of radiation pattern, Fourier transform method can be used to get solution. Unfortunately, centeral dominant radiation pattern like Lambertian or Gaussian, the solution function on frequncy domain diverges as $|\omega| \rightarrow \infty$ which is invaild Dirichlet's conditions. Therefore, we cannot get exact distribution formula from the equation. 
+
+In this case, to get an approximation of system, we can matrize above system. 1-dim convolution equation could be directly transformed to simple linear equation with discretization.
 
 Let, for $i = \N^+ \backslash \{0 \}$,
 $$\Delta_n = \frac{W}{n}$$
@@ -169,17 +177,15 @@ $c = 1$ below equations for convinence of computation.
 
 $$\mathbf{R}\vec{t} = \vec{i} = c \vec{1}$$
 
-The ideal solution for system is zero-one solution  which is $\vec{t}_i = \{0, 1\} \forall i \in[1, n]$. However, this is one example of NP-hard problem in computation, no standard algorithm exists. Focusing on weight of each points in space, then the positivness, where $\vec{t}_i \geq 0,   \forall i \in[1, n]$, is enough to get approximation. 
+The ideal solution for system is zero-one solution  which is $\vec{t}_i = \{0, 1\} \forall i \in[1, n]$. However, this is one example of NP-hard problem in mathematics programming which means no standard algorithm exists. Focusing on weight of each points in space, then the positivness, where $\vec{t}_i \geq 0,   \forall i \in[1, n]$, is a given resitrction and it allow us various attemptions. Most well-known optimization method is Non-negative least square method(NNLS). With NNLS method the positive approximation is easily achieved but, the solvability and positiveness of system must be discussed. 
 
 #### **Positiveness of system**
-
-With NNLS method the positive approximation is easily achieved but, the solvability and positiveness of system must be discussed. 
 
 The association function $R_h(x,t): \mathbb{R} \times \mathbb{R} \rightarrow \mathbb{R}$ with Lambertian radiation pattern is 
 
 $$R_h(x,t) = \frac{1}{H} (1+ (\frac{x-t}{H})^2 )^{-(s/2 +1)}$$
 
-This is an *inverse multiquadratics* and strictly positive definite function, whem $\frac{s+2}{2} >1$ and by the definition of Lambertian, $s \leq 1$, this condition always achieved.
+This is an *inverse multiquadratics* and strictly positive definite function, when $\frac{s+2}{2} >1$ and by the definition of Lambertian, $s \leq 1$, this condition always achieved.
 
 See details of positive definite functions from below reference.
 
@@ -252,7 +258,7 @@ $$f(s, \alpha, n) := \frac{1/2 + {}_2F_1 \left(\frac{1}{2};\frac{s+2}{2} ;  \fra
 
 $$ f(s, \alpha, n) \geq n$$
 
-The left function, $f(s, \alpha, n)$, is monotonic increasing function with upper bound as $n$ increasing, (See `nmax.md`).
+The LHS of inequality, $f(s, \alpha, n)$, is monotonic increasing function with upper bound as $n$ increasing, (See `nmax.md`). Therefore, upper bound value $1$ yields next inequality.
 
 $$n_{max} \leq \sup{f(s, \alpha, n) } = \frac{1.5}{{}_2F_1 \left(\frac{1}{2}, \frac{s+2}{2}, \frac{3}{2}; -\frac{W}{2H}^{2} \right)}$$
 
@@ -260,18 +266,22 @@ $$n_{max} \leq \sup{f(s, \alpha, n) } = \frac{1.5}{{}_2F_1 \left(\frac{1}{2}, \f
 
 With active set method and Non-negative least square optimization, we can get positive optimizated solution for system of arbitary dimension, but as far from the dimension, $n_{max}$, nosiy signal will occured between dominant positions of source in solution. Practically, we want to find minimum number of sources generate uniform illumination on rectangular plane. 
 
-We can treat the solution as space-weight signal. Then, we can divide the solution.
+The solution can be treated as space-weight signal.
 Even we get a high nosied solution for higher dimension of system, passing thorough low pass filter with blocking value $[-f_{max}, f_{max}]$, where $f_{max} = \frac{2\pi}{W}$, provide us some constant solution for given optimization parameter no matter how dimension are changed.
 
 ### 2 dim case
 
-The general case is 2 dimension convolution and it is the original problem we want to solve. Luckily, the convolution transform is one of linear transform. Therefore, we can construct some linear system corresponding to each convolution system,
+The general case is 2 dimension convolution and it is the original problem we want to solve. Luckily, the convolution is one of linear transform. Therefore, we can construct some linear system corresponding to each convolution system,
 
 $$\mathbf{A} * \mathbf{X} = \lambda \mathbf{1} \Leftrightarrow \mathbf{A}'  \vec{x} = \lambda \vec{1}$$
 
 
 where, $\mathbf{A} \in M_{k \times k }(\R^+)$, $\mathbf{X} \in M_{n \times n}(\R^+)$, $\mathbf{1} \in (\R^+)^n$, and
 $\mathbf{A'} \in M_{m \times m}(\R^+)$, $\vec{x} \in (\R^+)^m$ , $\vec{\mathbf{1}} \in (\R^+)^m$ for $\lambda >0, k = 2n-1, m = n^2$.
+
+
+Since, positive kernel is implicated to convolution system the transformed matrix system is always solvable. See detiails in supplment document. 
+
 
 ---
 
