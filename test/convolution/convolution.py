@@ -191,21 +191,74 @@ def convolve2d(
     return result
 
 #
+
+def _vec2sub_toeplitz(vec, m): #m: column dimension of matrix
+    k = len(vec)
+    n = m-k +1
+    rows = []
+    for i in range(0, n):
+        row_zeros =  np.zeros(shape=(m-k,))
+        rows.append(np.insert(row_zeros, i, vec))
+    return np.vstack(rows)
+
+
 def convolve2toeplitz(
     data:np.ndarray, 
     filter:np.ndarray, 
     crop:Tuple[int, int]=(1, 1),
     edge_mode:Literal["extend", "wrap", "mirror","constant"]="constant",
-    edge_params = (0), 
+    edge_params = [0], 
     preserve_filter=False) -> Tuple[np.ndarray, np.ndarray, Callable]:
-    pass
-
-    return (A, b, lambda x:  x)
-
-def toeplitz_to_convolution2d(
-    A:np.ndarray, b:np.ndarray, 
-    dim=Tuple[int,int, int, int]
-    ):
     
-    return None
+    l, k = filter.shape
+    er, ec = get_dim_ext((l, k), crop)
+    data_ext = _expand_matrix(data, (er, ec), [edge_mode]+edge_params)
+
+    n,m = data_ext.shape
+
+    H_list = []
+    for i in range(0, l):
+        H_list.append(_vec2sub_toeplitz(filter[i], m))
+    
+    topelitz_dim = H_list[0].shape
+
+    rows =[]
+    for i in range(0, n-l+1):
+        i_f = i
+        i_b = n- l -i_f
+
+        row = i_f*[np.zeros(shape=topelitz_dim)] + H_list + i_b*[np.zeros(shape=topelitz_dim)]
+        rows.append(row)
+    return np.block(rows), data_ext.flatten()
+
+#-------------------------------------------------------------------------------------------------------
+# Special Case
+#---------------------------------------------------------------
+
+def get_matrix_system(filter, dim_d):
+    n,m = dim_d
+    l, k= filter.shape
+
+    if k != 2*m-1 or l != 2*n-1:
+        raise ValueError("Invaild dimension: l, k must be 2n-1, 2m-1")
+    
+    rows = []
+    for i in range(0, n):
+        row_i = n-1-i
+        row_f = 2*n-1-i
+
+        for j in range(0, m):
+            column_i = m-1 -j
+            column_f = 2*m-1 -j
+
+            #print(row_i, row_f)
+            #print(column_i, column_f)
+
+            t = filter[row_i : row_f, column_i:column_f]
+
+            #print(t.shape)
+            rows.append(t.flatten())
+
+    #mat = np.vstack(rows)
+    return np.vstack(rows)
 
