@@ -366,23 +366,91 @@ $$(H_{1i})[p, q] = \begin{cases}
  0 & q-p <0 | q-p\geq k
 \end{cases} $$
 
-$H_{1i} \in M_{(|m-k|+1) \times m}$ thus, $\mathbf{H} \in M_{((|n-l|+1)(|m-k|+1))\times(nm)}$
+$H_{1i} \in M_{(m-k+1) \times m}$ thus, $\mathbf{H} \in M_{((|n-l|+1)(|m-k|+1))\times(nm)}$
 
 For example, $H_{1i}$ is
 
 $$\begin{bmatrix}
-h_{i1} & h_{i2} & h_{i3}&\cdots & h_{ik}   & 0         & \cdots & 0 \\
-0      & h_{i1} & h_{i2}&\cdots & h_{ik-1} & h_{ik}    & \cdots & 0 \\
-0      & 0      & h_{i1}&\cdots & h_{ik-2} & h_{ik-1}  & \cdots & 0 \\
-\vdots & \vdots & \vdots& \ddots& \vdots   & \vdots    & \ddots &\vdots\\
-0      & 0      & 0     & \cdots& h_{i1}   & h_{i2}    & \cdots & {} \\
-0      & 0      & 0     & \cdots& 0        & h_{i1}    & \cdots & {} \\
-\vdots & \vdots & \vdots& \ddots& \vdots   & \vdots    & \ddots & {} \\
-0      & 0      & 0     & \cdots& 0        & 0         & \cdots & {}
+h_{i1} & h_{i2} & h_{i3}&\cdots & h_{ik}   & 0         & \cdots & 0 &\cdots & 0\\
+0      & h_{i1} & h_{i2}&\cdots & h_{ik-1} & h_{ik}    & \cdots & 0 &\cdots & 0\\
+0      & 0      & h_{i1}&\cdots & h_{ik-2} & h_{ik-1}  & \cdots & 0 &\cdots & 0\\
+\vdots & \vdots & \vdots& \ddots& \vdots   & \vdots    & \ddots & {}&\vdots & {}\\
+0      & 0      & 0     & \cdots& h_{i1}   & h_{i2}    & \cdots & {h_{ik-1}}& \cdots &0 \\
+0      & 0      & 0     & \cdots& 0        & h_{i1}    & \cdots & {h_{ik-2}}& \cdots &0 \\
+\vdots & \vdots & \vdots& \ddots& \vdots   & \vdots    & \ddots & {} & {\vdots} & {} \\
+0      & 0      & 0     & \cdots& 0        & 0         & \cdots & h_{i1} &\cdots & h_{ik}
 \end{bmatrix}$$
 
 
 #### Condition for square matrix
+
+<table style="border-radius:8px;width:100%;">
+<th style="text-align:center;background-color:rgb(0, 0, 0); color:white; border-top-left-radius: 10px;width:20%;">
+Thm</th>
+<th style="text-align:left;">
+Square condition of transformed matrix of convolution </th>
+<tr style="text-align:center;">
+<td colspan="2">
+
+For given convolution,
+
+$$ X * K$$
+
+where $X \in M_{n\times m},  K \in M_{l \times k}$ with cropping coefficient $(c_r, c_c)$,
+
+corresponding matrix equation with () tranformation, 
+
+$$\mathbf{K} \cdot \vec{\mathbf{x}}.$$ 
+
+If $l = 2 c_r -1$ and $k = 2 c_c -1$ and kernel cropping then, the system is a square system of which $\mathbf{K} \in M_{nm \times nm}$
+
+</td>
+</tr>
+
+</table>
+
+**Proof**
+
+Start from extend matrix, $X_{ext}$ by the kernel and cropping dimensions,
+
+Note: It is a roundabout way but very convinence in flow.
+
+$$X_{ext} := \left[
+\begin{array}{c c c}
+{} & R_1 &{}\\
+\hline
+C_1 &  X & C_2\\
+\hline
+{}& R_2 & {}
+\end{array}\right]$$
+
+
+$$X_{ext} \in M_{n_{ext}\times m_{ext}} \\n_{ext} = n + 2 e_r, m_{ext} = m + 2 e_c$$
+
+where, $e_r = l- c_r, e_c = k -c_c$.
+
+The corresponding matrix system is 
+
+$$\mathbf{K} \in M_{a\times b}\\
+a = (n_{ext}-l+1)(m_{ext}-k+1)\\
+b = n_{ext} m_{ext}$$
+
+First with kernel cropping, the additional $e_r = e_c =0$, thus $n_{ext} = n , m_{ext} = m$.
+
+and if we extend $a$ with $n, m, l, k, c_r, c_c$ then,
+
+$$a = nm \\
++ \left( (n+m) + (nk + ml) - lk +1 \right)\\
+- \left( 2(n c_c + m_cr) -(l c_c + kc_r) + (c_r + c_c)\right)$$
+
+$$\because l = 2c_r -1, k = 2c_c -1 \\
+(n+m) + (nk + ml) - lk +1 \\
+ = (n+m) +2(nc_c + mc_r ) - (n+m) + (l c_c + kc_r) - (c_r + c_c) \\
+
+ \therefore a = nm, a=b
+$$
+
+---
 
 if $l = 2n-1 \& k = 2m-1$ then, all submatrices $H_{1,i}$ become upper triangle Toeplitz matrix, thus we get square matrix system.
 

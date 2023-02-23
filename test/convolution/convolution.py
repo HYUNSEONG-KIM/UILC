@@ -208,7 +208,6 @@ def convolve2toeplitz(
     edge_mode:Literal["extend", "wrap", "mirror","constant"]="constant",
     edge_params = [0], 
     vaildation=False) -> Tuple[np.ndarray, np.ndarray, Callable]:
-    n_o, m_o = data.shape
     l, k = filter.shape
     er, ec = get_dim_ext((l, k), crop)
     data_ext = _expand_matrix(data, (er, ec), [edge_mode]+edge_params)
@@ -217,7 +216,10 @@ def convolve2toeplitz(
 
     H_list = []
     for i in range(0, l):
-        H_list.append(_vec2sub_toeplitz(filter[i], m))
+        h_i = _vec2sub_toeplitz(filter[i], m)
+        if vaildation:
+            h_i = h_i[:, ec:-ec]
+        H_list.append(h_i)
     
     topelitz_dim = H_list[0].shape
 
@@ -232,13 +234,9 @@ def convolve2toeplitz(
     mat = np.block(rows)
 
     if vaildation:
-        mat = mat[:, er:-er]
-        columns = []
-        for i in range(0, n_o):
-            col_matrix = mat[:, i*m: (i+1)*m]
-            columns.append(col_matrix[:, ec: -ec])
-        mat = np.block(columns)
-
+        c = topelitz_dim[1]
+        erc = er*c
+        mat = mat[:, erc:-erc]
         vec = data.flatten()
     else:
         vec = data_ext.flatten()
