@@ -288,7 +288,7 @@ C_1 &  X & C_2\\
 where, $\dim(X) = (n ,m), \dim(H) = (l, k), \dim(X') = \left(n +2(l-c_r) , m +2(k-c_c)\right)$. 
 The rectangle matrix $R_1 R_2, C_1, C_2$ are symmetric for each row and column filp operation and determined by edge handling method.
 
-For example with cropping $(2, 2)$ and kernel cropping: $0$ constant handling, next convolution can be  
+For example, see details of next convolution with cropping $(2, 2)$ and kernel cropping: $0$ constant handling.
 
 $$C = \left(\begin{bmatrix}
 a & b & c & d\\
