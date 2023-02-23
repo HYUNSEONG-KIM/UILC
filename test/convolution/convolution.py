@@ -175,7 +175,7 @@ def convolve2d(
     filter:np.ndarray,
     crop:Tuple[int, int]=(1, 1),
     edge_mode:Literal["extend", "wrap", "mirror","constant"]="constant",
-    edge_params = [0]
+    edge_params = [0],
     ):
     l, k = filter.shape
     er, ec = get_dim_ext((l, k), crop)
@@ -187,7 +187,6 @@ def convolve2d(
     for i, h_row in enumerate(filter):
         data_i = data_ext[i:n-l+i+1]
         result += np.stack([np.convolve(r, h_row, mode="vaild") for r in data_i])
-
     return result
 
 #
@@ -208,8 +207,8 @@ def convolve2toeplitz(
     crop:Tuple[int, int]=(1, 1),
     edge_mode:Literal["extend", "wrap", "mirror","constant"]="constant",
     edge_params = [0], 
-    preserve_filter=False) -> Tuple[np.ndarray, np.ndarray, Callable]:
-    
+    vaildation=False) -> Tuple[np.ndarray, np.ndarray, Callable]:
+    n_o, m_o = data.shape
     l, k = filter.shape
     er, ec = get_dim_ext((l, k), crop)
     data_ext = _expand_matrix(data, (er, ec), [edge_mode]+edge_params)
@@ -229,7 +228,21 @@ def convolve2toeplitz(
 
         row = i_f*[np.zeros(shape=topelitz_dim)] + H_list + i_b*[np.zeros(shape=topelitz_dim)]
         rows.append(row)
-    return np.block(rows), data_ext.flatten()
+    
+    mat = np.block(rows)
+
+    if vaildation:
+        mat = mat[:, er:-er]
+        columns = []
+        for i in range(0, n_o):
+            col_matrix = mat[:, i*m: (i+1)*m]
+            columns.append(col_matrix[:, ec: -ec])
+        mat = np.block(columns)
+
+        vec = data.flatten()
+    else:
+        vec = data_ext.flatten()
+    return mat, vec
 
 #-------------------------------------------------------------------------------------------------------
 # Special Case
@@ -251,14 +264,9 @@ def get_matrix_system(filter, dim_d):
             column_i = m-1 -j
             column_f = 2*m-1 -j
 
-            #print(row_i, row_f)
-            #print(column_i, column_f)
-
             t = filter[row_i : row_f, column_i:column_f]
 
-            #print(t.shape)
             rows.append(t.flatten())
 
-    #mat = np.vstack(rows)
     return np.vstack(rows)
 

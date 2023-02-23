@@ -1,7 +1,10 @@
 from typing import Tuple, Callable
 #------------------------
 import math
+
 import numpy as np
+from scipy.fft import fft, fftfreq, ifft
+from scipy import signal
 #-----------------------
 
 def r2(x:float,y:float)->float:
@@ -136,3 +139,65 @@ def extend_signal(
     
     return np.concatenate(sigs, axis=0), np.sort(np.concatenate(times, axis=0))
     
+def signal_cutting(time, sig, region=[None, None]):
+    d_i, d_f = region
+    if d_i is not None:
+        t_index =  np.argwhere(d_i< time).reshape(-1)
+        time = time[t_index]
+        sig = sig[t_index]
+    if d_f is not None:
+        t_index =  np.argwhere(time< d_f).reshape(-1)
+        time = time[t_index]
+        sig = sig[t_index]
+    return time, sig
+
+
+def signal_decomposition(
+    time:np.ndarray, 
+    sig:np.ndarray, 
+    thersholf_freq:float, 
+    return_type=True
+    )-> Tuple[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]:
+    N = len(time)
+    T = time[1]-time[0]
+
+    sig_f = fft(sig)
+    x_f = fftfreq(N ,T)
+
+    sig_low = deepcopy(sig_f)
+    sig_low[np.where( np.fabs(x_f) > thersholf_freq)] =  0
+    sig_high = deepcopy(sig_f)
+    sig_high[np.where( np.fabs(x_f) <= thersholf_freq)] =  0
+
+    if return_type:
+        return ifft(sig_low), ifft(sig_high)
+    else:
+        return (sig_low.real, x_f), (sig_high.real, x_f)
+
+def detecting_shifted_time_max(time:np.ndarray, sig:np.ndarray):
+    sig_max = sig.max()
+
+    index_peaks, _ = signal.find_peaks(sig, height = 0.95*sig_max)
+
+    if len(index_peaks) <2:
+        return None
+    else:
+        i1 = index_peaks[0]
+        i2 = index_peaks[1]
+
+        return (time[i1] + time[i2])/2
+
+def resample_n(time:np.ndarray, sig:np.ndarray, N:int, rate=240):
+    W = time.max()-time.min()
+    sig_ext, time_ext = extend_signal(sig, time, n=N, period =None)
+    sig_resample  = signal.resample(sig_ext, N*rate)
+    time_resample = position_array(N*W, N*rate) - (0 if N%2 else W/2)
+
+    time_resample, sig_resample = signal_cutting(time_resample, sig_resample, [-W, W])
+
+    dt = detecting_shifted_time_max(time_resample, sig_resample)
+    if dt is None:
+        dt = 0
+
+    time_resample = time_resample - dt
+    return sig_resample, time_resample

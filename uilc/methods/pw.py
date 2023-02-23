@@ -41,7 +41,7 @@ def _nmax_app(s:float, W:float, H:float)->int:
     # Get boundary value of positiive solution
     # \frac{3}{{}_2F_1\left(\frac{1}{2}, \frac{s+2}{2}, \frac{3}{2}, - \frac{W^2}{4*H^2}\right)}
 
-    return half_ceil(3/ hyper2F1(1/2, (s+2)/2, 3/2, - (W/(2*H))**2))
+    return half_ceil(1.5/ hyper2F1(1/2, (s+2)/2, 3/2, - (W/(2*H))**2))
 
 def nmax(s:float, W:float, H:float)->int:
     n_app = _nmax_app(s, W, H)
