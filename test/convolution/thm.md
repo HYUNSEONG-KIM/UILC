@@ -30,7 +30,7 @@ For arbitary function $f$ on function space $\mathbf{F}$ defined on field $\math
 
 ## Edge handling
 
-Edge handling in convolution is a handling edge for calculating convolution near edge of the input, because near the edge of the given data there exist kernel parts requiring outside datas of the input. In mathematical definition and signal analysis, it is not mentioned before you treat discrete calculation. Commonly, this technique is significantly treated in image processing field:filtering.
+Edge handling in convolution is a handling edge for calculating convolution near edge of the input, because near the edge of the given data there exist kernel parts requiring outside datas of the input. In mathematical definition and signal analysis, it is not mentioned before you treat discrete calculation. Commonly, this technique is significantly treated in image processing field.
 
 ### List of edge handling method
 
@@ -122,7 +122,7 @@ $\begin{array}{c|c}
  }
 \end{array}$
 
-* Mirror:
+* Reflect:
 $\begin{array}{c|c}
  {
     \begin{matrix}
@@ -142,6 +142,34 @@ $\begin{array}{c|c}
    \begin{matrix}
     a_{13}, a_{12}, a_{11}\\ 
     a_{23}, a_{22}, a_{12}\\
+    \end{matrix}
+ }&{
+   \begin{matrix}
+    a_{11},  a_{12}\\ 
+    a_{21},  a_{22}\\
+   \end{matrix}
+ }
+\end{array}$
+* Mirror:
+$\begin{array}{c|c}
+ {
+    \begin{matrix}
+    a_{44}, a_{43}, a_{42}\\ 
+    a_{34}, a_{33}, a_{32}\\
+    a_{24}, a_{23}, a_{22}
+    \end{matrix}
+ }&{
+   \begin{matrix}
+    a_{41}, a_{42}\\ 
+    a_{31}, a_{32}\\
+    a_{21}, a_{22}
+    \end{matrix}
+ } \\
+ \hline
+ {
+   \begin{matrix}
+    a_{14}, a_{13}, a_{12}\\ 
+    a_{24}, a_{23}, a_{22}\\
     \end{matrix}
  }&{
    \begin{matrix}
@@ -189,18 +217,25 @@ $\begin{array}{c|c}
 
 By its linerity, all discrete convolution can be represented with matrix mulitplication, 
 even if dimension of the given system is higher than 2 by allowing larger rows and column number. 
-Inspite of that, using tensor equation is recommanded for convenience. By the way, common matrix convolution is represented as next.
+Common discrete convolution is represented as next with matrices, $\mathbf{X}, \mathbf{A}$.
 
 $$\mathbf{A} * \mathbf{X} = \mathbf{X} * \mathbf{A} = \mathbf{B}$$
 
-where, $\mathbf{A} \in M_{n \times m}(\mathbf{F}), \mathbf{X} \in M_{l \times k}(\mathbb{F}), \mathbf{B} \in M_{p \times q}(\mathbb{F})$. 
+where, $\mathbf{A} \in M_{n \times m}(\mathbf{F}), \mathbf{X} \in M_{l \times k}(\mathbb{F}), \mathbf{B} \in M_{p \times q}(\mathbb{F})$. Dimension of convolution, $\mathbf{B}$ is differ by the cropping coefficient, $c_r, c_c$. 
+
+$$n-l +1 \leq p= (n +l - 2c_r +1) \leq n+l +1\\
+m-k +1 \leq q=(m+k -2c_c +1)  \leq m+k +1$$
 
 However, the above is just represent 2-dim functions and their sample data as matrix form. **It is not a matrix multiplication representation**.
 Matrix representation system corresponding to the above convolution is,
 
 $$\mathbf{A_c} \cdot \mathbf{X_c} = \mathbf{B_c}$$
 
-Allowing some transformation on $\mathbf{B_c}$, we can choose various matrix equation, matrix-matrix or matrix-vector forms can be presented by the representation. 
+or
+
+$$\mathbf{X'_c} \cdot \mathbf{A'_c} = \mathbf{B'_c}$$
+
+Allowing some transformation on $\mathbf{B_c}$, we can choose various matrix equation, matrix-matrix or matrix-vector forms can be presented by the transformations we choose. 
 No matter the shape of system, $\mathbf{A_c}$ is always Toeplitz matrix or at least blocked Toeplitz matrix. 
 About $\mathbf{X_c}$ and $\mathbf{B_c}$, they may need reshaping functions respectively by the representiation. 
 For example, Michal and Krystian suggested $\mathbf{B_c} = \mathbf{B}$ transform in 2-dim convolution calculation. 
@@ -211,6 +246,8 @@ In this document, two matrix-vector form transformations are presented and solva
 
 
 ### Dimension of convolution and cropping
+
+In this document, the convolution includes not only mathematics but also image processing term. 
 
 The convolution of matrix in this document is defined as,
 
@@ -235,13 +272,13 @@ where, $1 \leq p \leq n-l +1, 1\leq q \leq m-k+1$.
 
 The dimension of convolution is 
 
-$$(n,m) * (l, k) = (|n-l|+1, |m-k|+1)$$
+$$(n,m) * (l, k) = (n-l+1, m-k+1)$$
 
 This method may be seems to be special case of convolution that does not allowing outside overlapping. 
 However, if the input matrix is expanded to considering dimension and edge handling type, all convolutions can be transformed to above definition.
 Before the expansion description, details of cropping are needed.
 
-#### Cropping
+#### Cropping extend
 
 Cropping is defining a minimum overlapping dimension between kernel and input data.
 $(c_r, c_c)$ tuple indicates row and column cropping level respectively. In addition, $1 \leq c_r \leq l, 1\leq c_c \leq k$ for dimension of kernel $H \in M_{l \times k}$.
@@ -265,7 +302,7 @@ $$\begin{array}{cccc|c}
  c& c& c*a_{21}& c*a_{22}& c*a_{23}\\
 \end{array}$$
 
-The outside of the input data usually omitted, $0$ element unless some edge handling method is defined.
+The outside of the input data usually omitted in many cases, $0$ element unless some edge handling method is defined.
 Considering cropping coefficients $c_r, c_c$, overall dimension of convolution equation is
 
 $$(n, m) * (l, k) = (n+l -2c_r +1, m+k -2 c_c +1) \\
@@ -351,14 +388,14 @@ $$X = \left[\begin{array}{}
 
 $$ \vec{x_i} = [ x_{i1}, x_{i2}, \dots, x_{i (m-1) }, x_{i m}]$$
 
-$$\mathbf{H} =\left[ \begin{array}{c|c|c|c}
-H_{11}     & H_{12} & \cdots & H_{1,n} \\
+$$\mathbf{H} = \left[ \begin{array}{c|c|c|c|c|c|c}
+H_{11}     & H_{12} & \cdots & H_{1,n_{ext}} & 0 &\cdots&{0} \\
 \hline
-\mathbf{0} & H_{11} & \cdots & H_{1,n-1}\\
+\mathbf{0} & H_{11} & \cdots & H_{1,n_{ext}-1}& H_{1,n_{ext}} & \cdots&{0}\\
 \hline
-\vdots & \vdots& \ddots & \vdots\\
+\vdots & \vdots& \ddots & \ddots & \vdots&{\ddots}&\vdots\\
 \hline
-\mathbf{0} & \mathbf{0} & \cdots &  H_{11}
+\mathbf{0} & \mathbf{0} & \cdots &  H_{11}& H_{12}& \cdots &H_{1,n_{ext}}
 \end{array}\right]$$
 
 $$(H_{1i})[p, q] = \begin{cases} 
@@ -398,7 +435,7 @@ $$ X * K$$
 
 where $X \in M_{n\times m},  K \in M_{l \times k}$ with cropping coefficient $(c_r, c_c)$,
 
-corresponding matrix equation with () tranformation, 
+corresponding matrix equation with the above tranformation, 
 
 $$\mathbf{K} \cdot \vec{\mathbf{x}}.$$ 
 
@@ -451,8 +488,35 @@ $$\because l = 2c_r -1, k = 2c_c -1 \\
 $$
 
 ---
+ 
+By the definition of transform, the block matrix $\mathbf{H}$ of form,
 
-Above condition guarantees that $H_i$ be a square matrix, thus $\mathbf{H}$ is a double-sqaure blocked Hermitz Toeplitz matrix.
+$$\mathbf{H} = \left[ \begin{array}{c|c|c|c|c|c|c}
+H_{11}     & H_{12} & \cdots & H_{1,n_{ext}} & 0 &\cdots&{0} \\
+\hline
+\mathbf{0} & H_{11} & \cdots & H_{1,n_{ext}-1}& H_{1,n_{ext}} & \cdots&{0}\\
+\hline
+\vdots & \vdots& \ddots & \ddots & \vdots&{\ddots}&\vdots\\
+\hline
+\mathbf{0} & \mathbf{0} & \cdots &  H_{11}& H_{12}& \cdots &H_{1,n_{ext}}
+\end{array}\right]$$
+
+is reduced to 
+
+$$\mathbf{H} = \left[ 
+  \begin{array}{c|c|c|c}
+   H_{c_r} & H_{c_r +1} & \cdots & H_{l}\\
+   \hline
+   H_{c_r -1} & H_{c_r} & \cdots & H_{l-1}\\
+   \hline
+   \vdots & \vdots & \ddots & \vdots\\
+   \hline
+   H_1 & H_2 & \cdots  & H_{c_r}
+  \end{array}
+\right]$$
+
+
+Determinant: $\Pi_{i=1}^{n} h_{i1}^{(m)}$
 
 
 
