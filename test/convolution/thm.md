@@ -452,9 +452,7 @@ $$
 
 ---
 
-if $l = 2n-1 \& k = 2m-1$ then, all submatrices $H_{1,i}$ become upper triangle Toeplitz matrix, thus we get square matrix system.
-
-Determinant: $\Pi_{i=1}^{n} h_{i1}^{(m)}$
+Above condition guarantees that $H_i$ be a square matrix, thus $\mathbf{H}$ is a double-sqaure blocked Hermitz Toeplitz matrix.
 
 
 
