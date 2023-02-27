@@ -489,7 +489,7 @@ $$
 
 ---
  
-By the definition of transform, the block matrix $\mathbf{H}$ of form,
+By the definition of transform, the block banded matrix $\mathbf{H}$ of form,
 
 $$\mathbf{H} = \left[ \begin{array}{c|c|c|c|c|c|c}
 H_{11}     & H_{12} & \cdots & H_{1,n_{ext}} & 0 &\cdots&{0} \\
@@ -516,7 +516,19 @@ $$\mathbf{H} = \left[
 \right]$$
 
 
-Determinant: $\Pi_{i=1}^{n} h_{i1}^{(m)}$
+Note: $c_r =m, l = 2m-1$
+
+If the kernel function is positive definite function then, each sub-matrix $H_i$ is positive definite matrix by the definition. Thus, 
+
+$$ x^t H_i x >0,  \forall i \in [1, l], x \in \mathbb{R}^n$$
+
+for arbitary $\mathbf{x} \in \mathbb{R}^{nm}$ and its $j$-th partial of length $n$ is $x_j$,
+
+$$\mathbf{x} = [x_1, x_2, ... , x_m]$$
+
+$$\mathbf{x}^t \mathbf{H} \mathbf{x} = \sum_{i =1}^{c_r} \sum_{j=1}^{c_r} x_j^t H_{ij} x_j $$
+
+since, $x_j^t H_{ij} x_j >0, \forall j \in [1, m]$, therefore, $\mathbf{H}$ is positive definite matrix; invertible.
 
 
 

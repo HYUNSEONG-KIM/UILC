@@ -86,6 +86,48 @@ and those are positive function for all $t\in \mathbb{R}$.
 
 Thus any sampled Toeplitz matrix $\mathbf{T}_n$ its minumum value of eigen values are greater or equal to zero.
 
+However, with positive definite function Theorem. we can get more strict result. See next reference.
+
+> Gregory E Fasshauer, Meshfree Approximation Methods With Matlab, 6th SEries of Interdisciplinary MAthematical Sciences, World Scientific Publishing Company, 2007, ISBN: 9813101571.
+
+**Definition**: Positive definite function
+
+A complex-valued continuouse function $\Phi: \mathbb{R}^s \rightarrow \mathbb{C}$ is called *positive definite* on $\mathbb{R}^s$ if 
+
+$$\sum_{j=1}^{N} \sum_{k=1}^{N} c_j \overline{c_k} \Phi(x_j - x_k) \geq 0$$
+
+for any $N$ pairwise different points $x_1, \dots , x_N \in \mathbb{R}^s$ and $c = [c1, \dots, c_N]^T \in \mathbb{C}^N$. If the function $\Phi$ is zero only for $\mathbb{c} =0$ on the above equation, then called *strictly positive definite* on $\mathbb{R}^s$.
+
+**Properties**: $\Phi_i$ are positive definite functions.
+
+1. Non-negative finite linear combinations(coefficients are non-negative) of positive definite functions are positive definite.
+2. From non-negative finite linear combinations of positive definite functions, if at least one of function is strictly positive definite and corresponding coefficient is non-zero then combination also be a strictly positive definite.
+3. $\Phi_i(0) \geq 0$
+4. If $\Phi_i(0) =0$ then, $\Phi_i(x) = 0, \forall x$
+5. $\Phi_i(-x) = \overline{\Phi_i(x)}$
+6. Any $\Phi_i$ is bounded, preciously, $|\Phi(x)|\leq\Phi_i(0)$
+7. Products of (strictly) positive definite functions is (strictly) positive definite function.
+
+
+Thus, $\min(\{\lambda_{T_n}\})$ is monotonic decreasing function by interger $n$ increasing with lower bound $0$. 
+
+With Cauchy Interace theorem, for $n$ dim Toeplitz matrix $T_n$ and its principle submatrix of dimension $n-1$, $T_{n-1}$ their ordered eigenvalues $\{\lambda_i \}, \{\mu_i \}$. By the above result, the lower bound is $0$ so that
+
+
+
+$$\text{Tr}(T_n) = na_0 = \sum_{i=1}^n \lambda_i\\
+\text{Tr}(T_{n-1}) = (n-1) a_0 = \sum_{i=1}^{n-1} \mu_i
+$$
+
+$$a_0 = \sum_{i=1}^n \lambda_i - \sum_{i=1}^{n-1} \mu_i\\
+= \lambda_1  + \sum_{i=1}^{n-1}(\lambda_{i+1} - \mu_i)$$
+
+Schur Complement: 
+
+$$\det(T_n) = \det(T_{n-1}) (a_0 - l_{n-1}^t T_{n-1}^{-1}l_{n-1})$$
+
+$$T_{n-1} y = l_{n-1}$$
+
 <table style="border-radius:8px;width:100%;">
 <th style="text-align:center;background-color:rgb(0, 0, 0); color:white; border-top-left-radius: 10px;width:20%;">
 Thm</th>
