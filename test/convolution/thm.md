@@ -213,7 +213,7 @@ $\begin{array}{c|c}
 * **Cropping**: Usually, cropping input data or kernel also discussed in edge handling topic. However, cropping method can be combined with the above methods or the kernel cropping can be implemented with constant method, therefore it will be treated in further section as preprocessig option in convolution. 
 
 
-## Matrix representation of convolution
+## Matrix representation of discrete convolution
 
 By its linerity, all discrete convolution can be represented with matrix mulitplication, 
 even if dimension of the given system is higher than 2 by allowing larger rows and column number. 
