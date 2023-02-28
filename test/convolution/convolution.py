@@ -170,23 +170,45 @@ def _edge_matrix(data, dim_ext, edge_param):
 
     return C1, C2, R1, R2
 
-def convolve2d(  
+def convolve2d(  ## 1dim with 2dim convolution
     data:np.ndarray, 
     filter:np.ndarray,
     crop:Tuple[int, int]=(1, 1),
     edge_mode:Literal["extend", "wrap", "mirror","constant"]="constant",
     edge_params = [0],
+    image_mode = False
     ):
+    filter = np.flip(filter, axis=0) # axis=1 flip occured at np.convolve routine.
     l, k = filter.shape
+
+    if image_mode:
+        add_row = add_col = False
+        crop = (int(np.ceil((l+1)/2)), int(np.ceil((k+1)/2)))
+        if l%2 == 0:
+            add_row = True
+        if k%2 == 0:
+            add_col = True
+
     er, ec = get_dim_ext((l, k), crop)
 
     data_ext = _expand_matrix(data, (er, ec), [edge_mode]+edge_params)
-    n,m = data_ext.shape
 
+    if image_mode:
+        if add_row:
+            np.vstack([data_ext, data_ext[-1]])
+        if add_col:
+            data_ext = np.hstack([data_ext, data_ext[:, -1].reshape((1, -1)).transpose()])
+
+    n,m = data_ext.shape
     result = np.zeros(shape = (n-l+1, m-k+1))
     for i, h_row in enumerate(filter):
         data_i = data_ext[i:n-l+i+1]
-        result += np.stack([np.convolve(r, h_row, mode="vaild") for r in data_i])
+        result += np.stack([np.convolve(h_row, r, mode="vaild") for r in data_i])
+    if image_mode:
+        if add_row:
+            result = result[:-1]
+        if add_col:
+            result = result[:, -1]
     return result
 
 #
@@ -207,7 +229,7 @@ def convolve2toeplitz(
     crop:Tuple[int, int]=(1, 1),
     edge_mode:Literal["extend", "wrap", "mirror","constant"]="constant",
     edge_params = [0], 
-    vaildation=False) -> Tuple[np.ndarray, np.ndarray, Callable]:
+    allow_ext=False) -> Tuple[np.ndarray, np.ndarray, Callable]:
     l, k = filter.shape
     er, ec = get_dim_ext((l, k), crop)
     data_ext = _expand_matrix(data, (er, ec), [edge_mode]+edge_params)
@@ -217,7 +239,7 @@ def convolve2toeplitz(
     H_list = []
     for i in range(0, l):
         h_i = _vec2sub_toeplitz(filter[i], m)
-        if vaildation:
+        if not allow_ext:
             h_i = h_i[:, ec:-ec]
         H_list.append(h_i)
     
@@ -233,7 +255,7 @@ def convolve2toeplitz(
     
     mat = np.block(rows)
 
-    if vaildation:
+    if not allow_ext:
         c = topelitz_dim[1]
         erc = er*c
         mat = mat[:, erc:-erc]
