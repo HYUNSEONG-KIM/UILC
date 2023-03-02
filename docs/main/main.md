@@ -280,7 +280,8 @@ where, $\mathbf{A} \in M_{k \times k }(\R^+)$, $\mathbf{X} \in M_{n \times n}(\R
 $\mathbf{A'} \in M_{m \times m}(\R^+)$, $\vec{x} \in (\R^+)^m$ , $\vec{\mathbf{1}} \in (\R^+)^m$ for $\lambda >0, k = 2n-1, m = n^2$.
 
 
-Since, positive kernel is implicated to convolution system the transformed matrix system is always solvable. See detiails in supplment document. 
+Since, positive kernel is implicated to convolution system the transformed matrix system is always solvable. However, in this document, the matrix representation allow NNLS optimization for convolution equation. See detiails in supplment document. 
+
 
 
 ---

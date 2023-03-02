@@ -93,26 +93,26 @@ def power_weight(
 def kernel_map(s, Wx, Wy, H, dim):
     pass
 
-def power_weight2d(
-        s, Wx, Wy, H,
-        dim = (1, 1),
-        set_nmax_app = True):
-    
-    if set_nmax_app:
-        n_max_x = nmax(s, Wx, H)
-        n_max_y = nmax(s, Wy, H)
-        dim = (n_max_x, n_max_y)
-    
-    kernel = kernel_map(s, Wx, Wy, H, dim)
-    uniform = np.ones(shape=dim)
-
-    kernel_mat, uniform_v = convolve2toeplitz(uniform, kernel)[0]
-
-    sol_v = nnls(kernel_mat, uniform_v)[0]
-    sol_mat = restore_data(sol_v, dim, dim_crop = )
-    position_mat = 
-
-    return sol_mat, position_mat
+#def power_weight2d(
+#        s, Wx, Wy, H,
+#        dim = (1, 1),
+#        set_nmax_app = True):
+#    
+#    if set_nmax_app:
+#        n_max_x = nmax(s, Wx, H)
+#        n_max_y = nmax(s, Wy, H)
+#        dim = (n_max_x, n_max_y)
+#    
+#    kernel = kernel_map(s, Wx, Wy, H, dim)
+#    uniform = np.ones(shape=dim)
+#
+#    kernel_mat, uniform_v = convolve2toeplitz(uniform, kernel)[0]
+#
+#    sol_v = nnls(kernel_mat, uniform_v)[0]
+#    sol_mat = restore_data(sol_v, dim, dim_crop = )
+#    position_mat = 
+#
+#    return sol_mat, position_mat
 
 
 #------------------------------------------------------------------------------
@@ -188,7 +188,6 @@ def lq_binarization(
         return False
     return sol_xarr
 
-
 def signal_cutting(time, sig, region=[None, None]):
     d_i, d_f = region
     if d_i is not None:
@@ -214,12 +213,12 @@ def signal_decomposition(
     x_f = fftfreq(N ,T)
 
     sig_low = deepcopy(sig_f)
-    sig_low[np.where( np.fabs(x_f) > thersholf_freq)] =  0
+    sig_low[np.where(np.fabs(x_f) > thersholf_freq)] =  0
     sig_high = deepcopy(sig_f)
-    sig_high[np.where( np.fabs(x_f) <= thersholf_freq)] =  0
+    sig_high[np.where(np.fabs(x_f) <= thersholf_freq)] =  0
 
     if return_type:
-        return ifft(sig_low), ifft(sig_high)
+        return ifft(sig_low.real), ifft(sig_high.real)
     else:
         return (sig_low.real, x_f), (sig_high.real, x_f)
 
