@@ -13,6 +13,7 @@ from uilc.utils.hypergeo import get_mpmath_hyper
 from uilc.utils.mild_math import half_ceil, extend_signal 
 from uilc.utils.mild_math import diff_matrix, inv_diff_matrix
 from uilc.utils.radiation import gaussian, lambertian
+from uilc.utils.convolution import convolve2toeplitz, restore_data
 
 
 hyper2F1 = get_mpmath_hyper()
@@ -40,7 +41,6 @@ def _solve_discretized(n, s, W, H, getfd=False):
 def _nmax_app(s:float, W:float, H:float)->int:
     # Get boundary value of positiive solution
     # \frac{3}{{}_2F_1\left(\frac{1}{2}, \frac{s+2}{2}, \frac{3}{2}, - \frac{W^2}{4*H^2}\right)}
-
     return half_ceil(1.5/ hyper2F1(1/2, (s+2)/2, 3/2, - (W/(2*H))**2))
 
 def nmax(s:float, W:float, H:float)->int:
@@ -65,7 +65,10 @@ def nmax(s:float, W:float, H:float)->int:
                 state=2
     return n
 
-def power_weight(s, W, H, dim = 1, set_nmax = False, mean=False): #linear, nnls
+def power_weight(
+        s, W, H, 
+        dim = 1, 
+        set_nmax = False, mean=False): #linear, nnls
     n_max = nmax(s, W, H)
     if set_nmax:
         dim = n_max
@@ -86,6 +89,31 @@ def power_weight(s, W, H, dim = 1, set_nmax = False, mean=False): #linear, nnls
         position = position[np.argwhere(delta>therhold )[0:,0]]
         delta = delta[delta > therhold ]
     return delta, position
+
+def kernel_map(s, Wx, Wy, H, dim):
+    pass
+
+def power_weight2d(
+        s, Wx, Wy, H,
+        dim = (1, 1),
+        set_nmax_app = True):
+    
+    if set_nmax_app:
+        n_max_x = nmax(s, Wx, H)
+        n_max_y = nmax(s, Wy, H)
+        dim = (n_max_x, n_max_y)
+    
+    kernel = kernel_map(s, Wx, Wy, H, dim)
+    uniform = np.ones(shape=dim)
+
+    kernel_mat, uniform_v = convolve2toeplitz(uniform, kernel)[0]
+
+    sol_v = nnls(kernel_mat, uniform_v)[0]
+    sol_mat = restore_data(sol_v, dim, dim_crop = )
+    position_mat = 
+
+    return sol_mat, position_mat
+
 
 #------------------------------------------------------------------------------
 # Binarization
