@@ -90,7 +90,21 @@ def power_weight(
         delta = delta[delta > therhold ]
     return delta, position
 
-def kernel_map(s, Wx, Wy, H, dim):
+def kernel_map(s, Wx, Wy, H, n_x):
+    dr = Wy/Wx
+    n = n_x
+    m = int(n * dr)
+
+    l = 2*n-1
+    k = 2*m-1
+
+    dx, dy= Wx/n, Wy/m
+
+    index2pos = lambda i,j: (dx*(n/2-i))**2 + (dy*(m/2-j))**2
+
+    filter=np.fromfunction(
+    lambda i, j: lambertian(0, np.sqrt(index2pos(i, j)), s, H), 
+    (l,k), dtype=float)
     pass
 
 #def power_weight2d(
@@ -113,7 +127,6 @@ def kernel_map(s, Wx, Wy, H, dim):
 #    position_mat = 
 #
 #    return sol_mat, position_mat
-
 
 #------------------------------------------------------------------------------
 # Binarization
