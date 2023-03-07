@@ -16,6 +16,7 @@ System parameter(Lambertian)
 ## Criterion Methods
 
 ### ESC method
+
 <table style="border-radius:8px;width:100%;">
 <th style="text-align:center;background-color:rgb(0, 0, 0); color:white; border-top-left-radius: 10px;width:20%;">
 Def</th>
@@ -197,6 +198,8 @@ Now the remained property is positiveness. Kaykobad studied conditions of positi
 
 > M. Kaykobad, Positive solutions of positive linear systems, Linear Algebra and its Applications, Volume 64, January 1985, pp 133-140, doi:10.1016/0024-3795(85)90271-X
 
+
+
 <table style="border-radius:8px;width:100%;">
 <th style="text-align:center;background-color:rgb(0, 0, 0); color:white; border-top-left-radius: 10px;width:20%;">
 Thm</th>
@@ -223,6 +226,7 @@ then, the system is invertible and  $\vec{\sigma} = \mathbf{K}^{-1} \vec{\beta} 
 </tr>
 
 </table>
+
 
 ---
 
@@ -297,6 +301,69 @@ We have 4 kinds of grid and two types for each kinds.
 
 Triangular, Rectangular, Petagonal, and Hexagonal
 In addition, $x, y$ axis scale parameters could be considered.
+
+
+### Converting to source location
+
+Starting from next equation,
+
+$$\mathbf{R}\vec{t} = \vec{i} = c \vec{1}$$
+
+with NNLS method or ordinary matrix system solve with Kaykobad's condition we get some power weight map from the given geometric and optical system.
+
+The constant $c$ is an arbitary positive real number. Whatever it is does not affect to the system solver. This means that we can restrict the constant, $c$, without loss of generality of the solve process.
+
+We treat the output result as a probability density function defined on geometric area $W = W_x \times W_y$ and sampling from the probability distribution determined the solution. There are many sampling techniques, in this paper use **inverse transform sampling**. 
+
+The definition of probability density function is 
+
+<table style="border-radius:8px;width:100%;">
+<th style="text-align:center;background-color:rgb(0, 0, 0); color:white; border-top-left-radius: 10px;width:20%;">
+Def</th>
+<th style="text-align:left;">
+Probability density function</th>
+<tr style="text-align:center;">
+<td colspan="2">
+
+For continuous random variable $X$ and function $f$, $f$ is a *probability density* for $X$ that possesses the following properties:
+
+
+$$f(x) \geq 0$$
+
+$$\int_{-\infty}^\infty f(x) dx = 1$$
+
+$$\int_{a}^b f(x) dx = P(a < X <b) $$
+
+where $a,b$ are any two values of $x$ satisfying $a<b$.
+
+</td>
+</tr>
+
+</table>
+
+
+
+> Paul G. Hoel, Introduction to Mahtemtical statistics, 5th edition, Wiley, 1984, ISBN:978-0471890454, p. 41
+
+
+By the property of our previous solution the positiveness is achieved. Let $\vec{t}_\lambda$ is a solution when $c = \lambda$ on equation (marked). We can calcualte the exact value of $c$ which makes the ouput to satisfy the density function.
+
+$$c = \frac{1}{\Delta_n ||\vec{t_1}||_{L^1}} $$
+
+$$ = \frac{n}{W ||\vec{t_1}||_{L^1}} $$
+
+for 2dim solution
+
+$$c = \frac{n \cdot m}{Wx \cdot Wy \cdot ||\mathbf{X}||_{L^1}}$$
+
+
+Cumulative distribution function of the discrete density
+
+
+$$F_x(x) = P(X \leq x) = \sum_{x_i \leq x} P(X= x_i) = \sum_{x_i \leq x} p(x_i) $$
+
+$$F_{xy}(x, y) = P(X \leq x, Y \leq y) = \sum_{x_i \leq x} \sum_{y_i \leq y } p(x_i, y_i)$$
+
 
 
 
