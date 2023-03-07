@@ -282,6 +282,22 @@ $\mathbf{A'} \in M_{m \times m}(\R^+)$, $\vec{x} \in (\R^+)^m$ , $\vec{\mathbf{1
 
 Since, positive kernel is implicated to convolution system the transformed matrix system is always solvable. However, in this document, the matrix representation allow NNLS optimization for convolution equation. See detiails in supplment document. 
 
+We can get power weight map for the given region.
+
+If we can allocating power to the dimension, it is enough to apply to design.
+For whom want to get a result for source distribution, we can use local quatization of power weight map for each non zero points.
+
+1 dimension:
+
+
+
+2 dimension:
+
+We have 4 kinds of grid and two types for each kinds.
+
+Triangular, Rectangular, Petagonal, and Hexagonal
+In addition, $x, y$ axis scale parameters could be considered.
+
 
 
 ---
