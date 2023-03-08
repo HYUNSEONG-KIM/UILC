@@ -303,7 +303,17 @@ Triangular, Rectangular, Petagonal, and Hexagonal
 In addition, $x, y$ axis scale parameters could be considered.
 
 
-### Converting to source location
+## Converting to source location
+
+This section describes sampling methods especially *inverse method*.
+
+General acknowledgements
+
+> Luc Devroye, Non-Uniform Random Variate Generation, Springer-Verlag, 1986, DOI:10.1007/978-1-4613-8643-8, ISBN:1461386454 
+
+Chebyshev approximation and 2dim inverse algorithm 
+> Olver, Sheehan, and Alex Townsend. "Fast inverse transform sampling in one and two dimensions." arXiv preprint arXiv:1307.1223 (2013).
+
 
 Starting from next equation,
 
