@@ -65,7 +65,11 @@ def get_cheb_approx_cdf_pmf(pos_mass, dx, region=(None, None)):
 # Inverse Transform Sampling
 
 #    Direct
-def int_sampling(uni_sam, pos_mass):
+def int_sampling(
+        uni_sam, 
+        pos_mass,
+        interpolate = False # 1 dim interpolate between sample points
+        ):
     if pos_mass.min() <0 or pos_mass.max() >1:
         raise ValueError("Invaild value in probability mass vector. Exceeding range [0,1]")
     if math.fabs(pos_mass.sum() -1) > EPS:
@@ -83,8 +87,10 @@ def int_sampling(uni_sam, pos_mass):
     for uni_i in uni_sam:
         if uni_i <= cdf.min():
             samples.append(0)
+            continue
         if uni_i >= cdf.max():
             samples.append(n-1)
+            continue
         
         min_sol = np.where(cdf <=uni_i)[0]
         max_sol = np.where(cdf >=uni_i)[0]
@@ -93,8 +99,6 @@ def int_sampling(uni_sam, pos_mass):
         min_index = min_sol.max() if len(min_sol) >0 else None
         max_index = max_sol.min() if len(max_sol) >0 else None
 
-        
-        
         if min_index == max_index:
             if min_index is None:
                 pass
@@ -106,14 +110,24 @@ def int_sampling(uni_sam, pos_mass):
             else:
                 samples.append(min_index)
         else:
-            eps_min, eps_max = math.fabs(cdf[min_index]-uni_i), math.fabs(cdf[max_index]-uni_i)
+            if interpolate:
+                dy = cdf[max_index] - cdf[min_index]
 
-            if eps_min < eps_max:
-                samples.append(min_index)
+                dy_i = uni_i - cdf[min_index]
+                dx_i = dy_i / dy
+
+                samples.append(min_index + dx_i)
             else:
-                samples.append(max_index)
+                eps_min = math.fabs(cdf[min_index]-uni_i)
+                eps_max = math.fabs(cdf[max_index]-uni_i)
+                if eps_min < eps_max:
+                    samples.append(min_index)
+                else:
+                    samples.append(max_index)
         
     return np.array(samples)
+
+
 def int_sampling_2d():
     return 0
 #    Chebyshev

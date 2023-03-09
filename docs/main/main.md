@@ -305,7 +305,11 @@ In addition, $x, y$ axis scale parameters could be considered.
 
 ## Converting to source location
 
-This section describes sampling methods especially *inverse method*.
+This section describes sampling methods especially *inverse method*. 
+The power weight on the given region $W= W_x \times W_y$ could be viewed as a
+probability distribution of random variable $X, Y \in [-W_x/2 W_x/ 2] \times [-W_y/2,W_y/2 ]$. With sampling method from the distribution we can obtain some desired 
+source locations. We want some unique sampling from the distribution, however most of  sampling method depend on some uniform distribution data during the procedure.
+The inverse method also uses uniform distribution sample while the sampling process, but distribute them uniformly on $[0, 1]$ we can get some exact and location fitting for $N$ number of location sample. 
 
 General acknowledgements
 
@@ -374,7 +378,9 @@ $$F_x(x) = P(X \leq x) = \sum_{x_i \leq x} P(X= x_i) = \sum_{x_i \leq x} p(x_i) 
 
 $$F_{xy}(x, y) = P(X \leq x, Y \leq y) = \sum_{x_i \leq x} \sum_{y_i \leq y } p(x_i, y_i)$$
 
+The 2-dim inverse transform method is well described the preprint written by Olver, and Alex.
 
+> Olver, Sheehan, and Alex Townsend. "Fast inverse transform sampling in one and two dimensions." arXiv preprint arXiv:1307.1223 (2013).
 
 
 ---
