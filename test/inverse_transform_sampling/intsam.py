@@ -1,9 +1,10 @@
 import math
 from typing import Callable
+from numbers import Number
 from collections.abc import Iterable
 
 import numpy as np
-
+from scipy.optimize import bisect
 
 EPS = 10E6*np.finfo(float).eps
 
@@ -53,7 +54,6 @@ def cdf_cond(i, pro_mass, axis=0):# axis=0: x, axis=1: y
 
 
 # Chebyshev approximation
-
 def get_cheb_approx_pdf(pos_mass, x, region=(None, None)):
     if pos_mass.shape != x.shape:
         raise ValueError("Dimensions are not same each others.")
@@ -148,8 +148,20 @@ def int_sampling(
         result = np.concatenate(results)
         
     return result
-# Root finding
-from scipy.optimize import bisect
+
+
+
+    
+def int_sampling_2d(uni_sam, cdf, order=0):#
+    return 0
+#    Chebyshev
+def int_cheby_sampling():
+    return 0
+def int_cheby_sampling_2d():
+    return 0
+
+# Continuous version
+## Root finding
 def int_sampling_root(
         uni_sam,
         cdf:Callable,
@@ -164,30 +176,38 @@ def int_sampling_root(
     for uni_s in uni_sam:
         result.append(bisect(lambda x: cdf(x) - uni_s, *domain))
     return np.array(result)
-    
-def int_sampling_2d(uni_sam, cdf, order=0):#
-    return 0
-#    Chebyshev
-def int_cheby_sampling():
-    return 0
-def int_cheby_sampling_2d():
-    return 0
-
-# Continuous version
-
 
 # SVD Chebyshev approximation
-
+#
 class RankApprox2dim:
-    def __init__(self, fx_list, fy_list, weights):
-        self.fx_list = fx_list
-        self.fy_list = fy_list
-        self.weights = weights
-        pass
-    @classmethod
-    def from_pivots(cls, xy_pivots, f:Callable, domain, cheby_deg):
-        return cls()
-    
+    def __init__(self, fx_list, fy_list, weights, domain=None, **kwargs):
+        self._fx_list = np.array(fx_list) if not isinstance(fx_list, np.ndarray) else fx_list
+        self._fy_list = np.array(fy_list) if not isinstance(fy_list, np.ndarray) else fy_list
+        self._weights = np.array(weights) if not isinstance(weights, np.ndarray) else weights
+
+        if (self._fx_list.shape) != 1:
+            self._fx_list = self._fx_list.reshape(-1) 
+        if (self._fy_list.shape) != 1:
+            self._fy_list = self._fy_list.reshape(-1) 
+        if (self._weights.shape) != 1:
+            self._weights = self._weights.reshape(-1) 
+
+        l_a = len(self._fx_list) 
+        l_b = len(self._fy_list)
+        l_c = len(self._weights)
+
+        if l_a != l_b or l_b != l_c or l_a != l_c:
+            raise ValueError("Dimensions are not same, {l_a}, {l_b}, {l_c}.")
+
+        self.__check_types(self._fx_list, self._fy_list, self._weights)
+        self.domain = domain
+        self.add_info = kwargs
+    def __call__(self, x, y, dtype=None):
+        if dtype is None:
+            dtype = float
+        f_x_v = np.fromiter((fi(x) for fi in self._fx_list), dtype=np.dtype(dtype))
+        f_y_v = np.fromiter((fi(y) for fi in self._fy_list), dtype=np.dtype(dtype))
+        return self._weights.dot(f_x_v.dot(f_y_v))
     def __check_types(self, fx_list, fy_list, weights):
         for fx in fx_list:
             if isinstance(fx, Callable):
@@ -198,13 +218,22 @@ class RankApprox2dim:
                 continue
             raise TypeError("fy list must consist of callable objects.")
         for w in weights:
-            if isinstance(w, Numeric)
-        pass
-    def add_elements(self, fx_list, fy_list, weights):
+            if isinstance(w, Number):
+                continue
+            raise TypeError("weight must consist of number type.")
+    @classmethod
+    def from_pivots(cls, xy_pivots, f:Callable, domain, cheby_deg):
+        return cls( domain=domain, cheby_deg = cheby_deg)
+    def rank_increasing(self, fx_list, fy_list, weights):
         fx_list = list(fx_list) if isinstance(fx_list, Iterable) else [fx_list]
         fy_list = list(fy_list) if isinstance(fy_list, Iterable) else [fy_list]
         weights = list(weights) if isinstance(weights) else [weights]
-
+        if (fx_list.shape) != 1:
+            fx_list = fx_list.reshape(-1) 
+        if (fy_list.shape) != 1:
+            fy_list = fy_list.reshape(-1) 
+        if (weights.shape) != 1:
+            weights = weights.reshape(-1) 
         l_a = len(fx_list) 
         l_b = len(fy_list)
         l_c = len(weights)
@@ -214,20 +243,68 @@ class RankApprox2dim:
         
         self.__check_types(fx_list, fy_list, weights)
 
-        self.fx_list += fx_list
-        self.fy_list += fy_list
-        self.weights += weights
-
-    def fx(self, x):
-        self.fx_list
-        return result
-    def fy(self, y):
-        self.fy_list
-        return result
-    def __call__(self, x, y):
-        f_x_v = self.f_x
-
-        return self.coefs.dot( self.f_x.dot())
+        self._fx_list += np.concatenate([self._fx_list, fx_list])
+        self._fy_list += np.concatenate([self._fy_list, fy_list])
+        self._weights += np.concatenate([self._weights, weights])
+    #--------------------------------------------------------------------------------
+    @property
+    def elements(self, a, b = None):
+        fx_e = self.fx_list[:a] if b is None else self.fx_list[a:b]
+        fy_e = self.fy_list[:a] if b is None else self.fy_list[a:b]
+        weight_e = self.weights[:a] if b is None else self.weights[a:b]
+        return np.vstack([fx_e, fy_e, weight_e]).transpose()
+    @property
+    def element(self, i):
+        return np.array([self.fx_list[i], self.fy_list[i], self.weights[i]])
+    @property
+    def fx_list(self):
+        return self._fx_list
+    @fx_list.setter
+    def fx_list(self, value):
+        value = np.array(value) if isinstance( value, np.ndarray) else value
+        if len(value.shape) !=1:
+            value = value.reshape(-1)
+        if value.size != self._fx_list.size:
+            raise ValueError(f"Length of the given function array is not same with rank {self._fx_list.size}")
+        for fx in value:
+            if isinstance(fx, Callable):
+                continue
+            raise TypeError("The given array must consist of callable objects.")
+        self._fx_list = value
+    @property
+    def fy_list(self):
+        return self._fy_list
+    @fy_list.setter
+    def fy_list(self, value):
+        value = np.array(value) if isinstance( value, np.ndarray) else value
+        if len(value.shape) !=1:
+            value = value.reshape(-1)
+        if value.size != self._fy_list.size:
+            raise ValueError(f"Length of the given function array is not same with rank {self._fy_list.size}")
+        for fy in value:
+            if isinstance(fy, Callable):
+                continue
+            raise TypeError("The given array must consist of callable objects.")
+        self._fy_list = value  
+    @property
+    def weights(self):
+        return self._weights
+    @weights.setter
+    def weights(self, value):
+        value = np.array(value) if isinstance( value, np.ndarray) else value
+        if len(value.shape) !=1:
+            value = value.reshape(-1)
+        if value.size != self._weights.size:
+            raise ValueError(f"Length of the given weights array is not same with rank {self._fy_list.size}")
+        for w in value:
+            if isinstance(w, Number):
+                continue
+            raise TypeError("The given array must consist of number objects.")
+        self._weights = value 
+    @property
+    def rank(self):
+        return self._weights.size
+    
 
 
 
