@@ -1,9 +1,13 @@
 import math
-from typing import Callable
+
+from typing import Callable, Tuple, Union
+from numpy.typing import NDArray, ArrayLike
 from numbers import Number
 from collections.abc import Iterable
 
 import numpy as np
+
+from numpy.polynomial.chebyshev import Chebyshev
 from scipy.optimize import bisect
 
 EPS = 10E6*np.finfo(float).eps
@@ -149,17 +153,6 @@ def int_sampling(
         
     return result
 
-
-
-    
-def int_sampling_2d(uni_sam, cdf, order=0):#
-    return 0
-#    Chebyshev
-def int_cheby_sampling():
-    return 0
-def int_cheby_sampling_2d():
-    return 0
-
 # Continuous version
 ## Root finding
 def int_sampling_root(
@@ -179,11 +172,18 @@ def int_sampling_root(
 
 # SVD Chebyshev approximation
 #
+SingleFunction = Callable[[Number], Number]
 class RankApprox2dim:
-    def __init__(self, fx_list, fy_list, weights, domain=None, **kwargs):
+    def __init__(self, 
+                 fx_list:Union[SingleFunction, Iterable[SingleFunction]], 
+                 fy_list:Union[SingleFunction, Iterable[SingleFunction]], 
+                 weights:Union[Number, Iterable[Number]], 
+                 w_domain = float,
+                 domain:Union[None, Tuple[Number, Number, Number, Number]]=None, 
+                 **kwargs):
         self._fx_list = np.array(fx_list) if not isinstance(fx_list, np.ndarray) else fx_list
         self._fy_list = np.array(fy_list) if not isinstance(fy_list, np.ndarray) else fy_list
-        self._weights = np.array(weights) if not isinstance(weights, np.ndarray) else weights
+        self._weights = np.array(weights, dtype=w_domain) if not isinstance(weights, np.ndarray) else weights
 
         if (self._fx_list.shape) != 1:
             self._fx_list = self._fx_list.reshape(-1) 
@@ -192,7 +192,7 @@ class RankApprox2dim:
         if (self._weights.shape) != 1:
             self._weights = self._weights.reshape(-1) 
 
-        l_a = len(self._fx_list) 
+        l_a = len(self._fx_list)
         l_b = len(self._fy_list)
         l_c = len(self._weights)
 
@@ -202,13 +202,27 @@ class RankApprox2dim:
         self.__check_types(self._fx_list, self._fy_list, self._weights)
         self.domain = domain
         self.add_info = kwargs
-    def __call__(self, x, y, dtype=None):
+    def __call__(self, x:Union[Number, NDArray], y:Union[Number, NDArray], dtype:Union[None, Tuple[Union[object, type], Union[object, type]]]=None):
         if dtype is None:
-            dtype = float
-        f_x_v = np.fromiter((fi(x) for fi in self._fx_list), dtype=np.dtype(dtype))
-        f_y_v = np.fromiter((fi(y) for fi in self._fy_list), dtype=np.dtype(dtype))
-        return self._weights.dot(f_x_v.dot(f_y_v))
-    def __check_types(self, fx_list, fy_list, weights):
+            dtype = (float, float)
+        if not isinstance(x, np.ndarray):
+            f_x_v = np.fromiter((fi(x) for fi in self._fx_list), dtype=np.dtype(dtype[0]))
+            f_y_v = np.fromiter((fi(y) for fi in self._fy_list), dtype=np.dtype(dtype[1]))
+            return (self._weights * f_x_v * (f_y_v)).sum()
+        # x, y vector
+        # mesh = 2 dim
+        shape = x.shape
+        if len(shape) != 1: 
+            x = x.reshape(-1)
+            y = y.reshape(-1)
+        if len(x) != len(y):
+            raise ValueError("x, y values must have same dimension.")
+        weight = np.tile(self._weights, [len(x), 1]).transpose()
+        fx_v = np.array([list(map(f, x)) for f in self._fx_list])
+        fy_v = np.array([list(map(f, y)) for f in self._fy_list])
+        return (weight * fx_v * fy_v).sum(axis=0).reshape(shape)
+        
+    def __check_types(self, fx_list:NDArray, fy_list:NDArray, weights:NDArray):
         for fx in fx_list:
             if isinstance(fx, Callable):
                 continue
@@ -224,7 +238,10 @@ class RankApprox2dim:
     @classmethod
     def from_pivots(cls, xy_pivots, f:Callable, domain, cheby_deg):
         return cls( domain=domain, cheby_deg = cheby_deg)
-    def rank_increasing(self, fx_list, fy_list, weights):
+    def rank_up(self, 
+                        fx_list:Union[SingleFunction, Iterable[SingleFunction]], 
+                        fy_list:Union[SingleFunction, Iterable[SingleFunction]], 
+                        weights:Union[Number, Iterable[Number]]):
         fx_list = list(fx_list) if isinstance(fx_list, Iterable) else [fx_list]
         fy_list = list(fy_list) if isinstance(fy_list, Iterable) else [fy_list]
         weights = list(weights) if isinstance(weights) else [weights]
@@ -246,16 +263,42 @@ class RankApprox2dim:
         self._fx_list += np.concatenate([self._fx_list, fx_list])
         self._fy_list += np.concatenate([self._fy_list, fy_list])
         self._weights += np.concatenate([self._weights, weights])
+    def rank_down(self, a:None, b:None):
+        if a is None and b is None:
+            # del last element
+            pass
+        elif b is None:
+            # del last 'a' length elements
+            pass
+        else:
+            # del from a to b elements
+            pass
+
+
     #--------------------------------------------------------------------------------
-    @property
-    def elements(self, a, b = None):
+    def elements(self, a:int, b:Tuple[None, int] = None):
+        if b is None: 
+            if a > self.rank-1:
+                raise IndexError
+        else:
+            if a > b :
+                a, b = b,a
+            if b > self.rank-1:
+                raise IndexError
         fx_e = self.fx_list[:a] if b is None else self.fx_list[a:b]
         fy_e = self.fy_list[:a] if b is None else self.fy_list[a:b]
         weight_e = self.weights[:a] if b is None else self.weights[a:b]
         return np.vstack([fx_e, fy_e, weight_e]).transpose()
-    @property
     def element(self, i):
+        if i > self.rank-1:
+            raise IndexError
         return np.array([self.fx_list[i], self.fy_list[i], self.weights[i]])
+    def partial(self, a:int, b:int = None):
+        if b is not None:
+            fx, fy, weight = self.elements(a, b).transpose()
+        else:
+            fx, fy ,weight = self.element(a)
+        return RankApprox2dim(fx , fy, weight, domain=self.domain, **self.add_info)
     @property
     def fx_list(self):
         return self._fx_list
@@ -306,8 +349,6 @@ class RankApprox2dim:
         return self._weights.size
     
 
-
-
 def function_vec(f_arr, x, multi=False): # Array of functions apply to x value
     if multi:
         return np.fromiter((fi(*x) for fi in f_arr), dtype=np.dtype(type(x)))
@@ -348,5 +389,6 @@ def ge_approx(xy_points, f, domain, chebyshev_deg=100):
     v_func = [v_i(xy_points, max_i, f, domain, chebyshev_deg)]
     d_coef = [1/(f(*xy_points[max_i]))]
     for point in xy_points:
+        pass
 
 
