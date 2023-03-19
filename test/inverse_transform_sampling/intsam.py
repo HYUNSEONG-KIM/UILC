@@ -347,8 +347,20 @@ class RankApprox2dim:
     @property
     def rank(self):
         return self._weights.size
-    
 
+# Chebyshev
+from numpy.polynomial.chebyshev import Chebyshev
+def cheby_range_transform(x, a, b): # [-1, 1] -> [a, b]
+    return ((b-a)/2)*x + (b+a)/2
+def cheby_range_inv_transform(x, a, b): # [a, b] -> [-1, 1]
+    return (2/(b-a))*x - (b+a)/(b-a)
+def cheby_ext_grid(a, b, n):
+    x_i = np.cos((np.pi/n-1)*np.arange(n))
+    return cheby_range_transform(x_i, a, b)
+def cheby_root_grid(a, b, n):
+    x_i = np.cos((np.pi/n)*(0.5+np.arange(n)))
+    return cheby_range_transform(x_i, a, b)
+#--------------------------------------------------
 def function_vec(f_arr, x, multi=False): # Array of functions apply to x value
     if multi:
         return np.fromiter((fi(*x) for fi in f_arr), dtype=np.dtype(type(x)))
