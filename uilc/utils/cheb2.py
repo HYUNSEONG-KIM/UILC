@@ -1,6 +1,7 @@
 # Python mild imeplementation of Chebfun library 2d approximation.
 # Original project: https://www.chebfun.org/
 # Algorithm details: Townsend, A., & Trefethen, L. N. (2013). An extension of Chebfun to two dimensions. SIAM Journal on Scientific Computing, 35(6), C495-C518.
+
 from typing import Callable, Tuple, Union
 from numbers import Number
 from collections.abc import Iterable
@@ -25,10 +26,36 @@ def cheby_root_grid(a, b, n):
     x_i = np.cos((np.pi/n)*(0.5+np.arange(n)))
     return cheby_range_transform(x_i, a, b)
 
+def integrate_indef_cheb(cheb_f:Chebyshev, x_i=None):
+    n = cheb_f.coef.size
+    
+    coef_cheby = cheb_f.coef[1:]
+    c0 = cheb_f.coef[0]
+    coef = 1/(2*(np.arange(n)+1))
+    w1 = np.concatenate([[0], coef_cheby ])
+    w2 = np.concatenate([coef_cheby[1:], [0,0]])
+    cheby_coef = np.concatenate([[0], coef*(w1-w2)])
+    cheby_coef[1] += c0
+    
+    cheb_f_int =Chebyshev(cheby_coef)
+    if x_i is not None:
+        cheby_coef[0] -= cheb_f_int(x_i)
+    return Chebyshev(cheby_coef)
+
+def integrate_def_cheb(cheb_f:Chebyshev, domain):
+    a, b = domain
+    cheb_f_inf = integrate_indef_cheb(cheb_f)
+    return cheb_f_inf(b)- cheb_f_inf(a)
+
+
 
 def _cheby_stage_1_params(i):
     i +=1
     return int(2**(i+2)+1), int(2**(i)+1)
+
+
+
+
 def get_xy_cheby_decompose(
         f:Callable, 
         point:Tuple[Number, Number], 
@@ -142,6 +169,9 @@ class RankApprox2dim:
             raise TypeError("fy list must consist of callable objects.")
         if  not np.issubdtype(weights.dtype, np.number):
             raise TypeError("Weight must consist of number type.")
+    
+    def integrate(self, x_domain=None, y_domain=None):
+        pass
     #-----------------------------------------------------------------------------
     @classmethod
     def from_function_approx(cls, 

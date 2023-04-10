@@ -174,7 +174,7 @@ def int_sampling_root(
 # Reference Cheb2fun 2d 
 SingleFunction = Callable[[Number], Number]
 Callable_check = np.frompyfunc(callable, 1, 1)
-def Cheby_stage_1_params(i):
+def Cheby_stage_params(i):
     i +=1
     return int(2**(i+2)+1), int(2**(i)+1)
 def get_xy_decompose(
@@ -198,7 +198,21 @@ def get_xy_decompose(
 
     u_i = Chebyshev.fit(uy_list, uz_list, deg=cheby_deg, domain=(b, d))
     return v_i, u_i
-
+def get_samples_from_pivots(pivots, domain, cheby_deg):
+    xi, yi, xf, yf = domain
+    
+    p_x, p_y = pivots.T
+    
+    x_list = cheby_root_grid(xi, xf, cheby_deg+1)
+    y_list = cheby_root_grid(yi, yf, cheby_deg+1)
+    
+    s_x1, s_y1 = np.meshgrid(p_x, y_list)
+    s_x2, s_y2 = np.meshgrid(x_list, p_y)
+    
+    s_x = np.vstack([s_x1, s_x2.reshape(s_x1.shape)])
+    s_y = np.vstack([s_y1, s_y2.reshape(s_y1.shape)])
+    return np.array([s_x, s_y])
+    
 class RankApprox2dim:
     def __init__(self, 
                  fx_list:Union[SingleFunction, Iterable[SingleFunction]], 
@@ -262,6 +276,10 @@ class RankApprox2dim:
     def __truediv__(self, other:Number):
         weights= self._weights/other
         return RankApprox2dim(self._fx_list, self._fy_list, weights, domain = self.domain)
+    def diff(self, axis = 2):
+        pass
+    def integral(self, axis =2):
+        pass
     def __call__(self, x:Union[Number, NDArray], y:Union[Number, NDArray], dtype:Union[None, Tuple[Union[object, type], Union[object, type]]]=None):
         if dtype is None:
             dtype = (float, float)
@@ -289,14 +307,17 @@ class RankApprox2dim:
             raise TypeError("fy list must consist of callable objects.")
         if  not np.issubdtype(weights.dtype, np.number):
             raise TypeError("Weight must consist of number type.")
-
+    
     @classmethod
     def from_function_approx(cls, 
                              f:Callable, 
                              domain:Tuple[Number, Number, Number, Number], 
                              tol_err = 5E-15,
                              initial_step=0,
-                             max_step = 5):
+                             max_step = 6,
+                             include_boundary= False,
+                             hold_pivot = False,
+                             show_process=False):
         if initial_step <0:
             initial_step = 0
         if max_step < initial_step:
@@ -306,13 +327,18 @@ class RankApprox2dim:
         y_i, y_f = domain[1], domain[3]
         
         err = 1.0
+        
+        # Stage 1
         for j in range(initial_step, max_step):
-            n, max_step_stage_1 = Cheby_stage_1_params(j)
+            n, max_step_stage_1 = Cheby_stage_params(j)
 
-            cheby_deg= (n-1)
+            cheby_deg= (n-1) if not include_boundary else n+1
 
             arr_x = cheby_root_grid(x_i, x_f, n)
             arr_y = cheby_root_grid(y_i, y_f, n)
+            if include_boundary:
+                arr_x = np.insert(arr_x, -1, [x_i, x_f])
+                arr_y = np.insert(arr_y, -1, [y_i, y_f])
             arr_x.sort()
             arr_y.sort()
 
@@ -324,16 +350,20 @@ class RankApprox2dim:
             def e_k(x, y):
                 return f(x, y) + e_k_approx(x, y)
             err = 1.0
+            pivots = []
             
             for k in range(0, max_step_stage_1):
                 e_k_val = e_k(p_x, p_y)
                 err = np.abs(e_k_val).max() 
+                if show_process:
+                    print(f"Step: {j}, Rank:{f_k.rank}, Err:{err}")
                 if err < tol_err: 
                     break
                 max_index = np.argmax(e_k_val)
                 r = int(max_index/c_l)
                 c = max_index%c_l
                 x_k, y_k = p_x[r, c], p_y[r, c]
+                pivots.append([x_k, y_k])
 
                 u_k, v_k = get_xy_decompose(e_k, (x_k, y_k ), domain, cheby_deg)
                 d_k  = 1/ e_k(x_k, y_k)
@@ -343,8 +373,10 @@ class RankApprox2dim:
             
             if err < tol_err: 
                     break
-
-        return f_k, err
+        
+        f_k.add_infos(err = err, pivots = np.array(pivots)) if hold_pivot else f_k.add_infos(err = err)
+        return f_k
+    
     def rank_up(self, 
                         fx_list:Union[SingleFunction, Iterable[SingleFunction]], 
                         fy_list:Union[SingleFunction, Iterable[SingleFunction]], 
@@ -379,6 +411,10 @@ class RankApprox2dim:
 
 
     #--------------------------------------------------------------------------------
+    def add_infos(self, **kwargs):
+        for key in kwargs.keys():
+            self.add_info[key] = kwargs[key]
+    
     def elements(self, a:int, b:Tuple[None, int] = None):
         if b is None: 
             if a > self.rank-1:
