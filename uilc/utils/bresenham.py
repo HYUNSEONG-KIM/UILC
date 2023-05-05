@@ -7,9 +7,7 @@
 
 import math
 from typing import Tuple, Union
-
 import numpy as np
-
 from uilc.utils.misc import float_eps
 
 def line(x, m, b):

@@ -1,6 +1,6 @@
-import math
-from typing import Tuple, Literal, Union
-from collections.abc import Iterable
+from typing import Tuple, Iterable, Union, Callable, Literal
+from numbers import Number
+import math 
 
 import numpy as np
 from scipy.optimize import root_scalar, minimize_scalar
@@ -71,6 +71,7 @@ class PositionArray(np.ndarray):
         if len(xarr.shape) != 1 or len(yarr.shape) != 1:
             raise ValueError("The given arrays, xarr and yarr, must be 1 dim array.")
         return cls(np.flip(np.array(np.meshgrid(yarr,xarr)).transpose(), axis=None))
+    
     @classmethod
     def from_meshgrid(cls, meshx, meshy=None, indexing="xy"):
         if meshy is None and len(meshx) ==2:
@@ -88,6 +89,7 @@ class PositionArray(np.ndarray):
         arr = np.flip(np.array(mesh).transpose(), axis=None)[::-1]
 
         return cls(np.transpose(arr, axes=(1, 0, 2)))
+    
     @classmethod
     def uniform(cls, d_t, N_t):
         if isinstance(d_t, Iterable):
@@ -122,6 +124,7 @@ class PositionArray(np.ndarray):
         #indexing = cls([[[(i-(N-1)/2), j-(M-1)/2] for i in range(0,N)] for j in range(0,M)])
 
         return cls.from_arrays(xarr, yarr) 
+    
     @classmethod
     def uniform_fill(cls, W, N_t):
         Nx, Ny = N_t
@@ -132,6 +135,7 @@ class PositionArray(np.ndarray):
 
         return cls.uniform((dx, dy), N_t)
     #---------------------------------------------------
+    
     def check_dim(self):
         shape = self.shape
         if len(shape) != 3 or len(shape) == 3 and len(self[0][0]) !=2 :
@@ -174,9 +178,41 @@ class PositionArray(np.ndarray):
         return (xarr.max()-xarr.min(), yarr.max()-yarr.min())
 
 
+class UILC:
+    radi_patterns = ["LAMBERT"]
+    def __init__(self, W:Tuple[float, float], H:float, radi_pattern:Union[str, Callable], *radi_arg):
+        if isinstance(W, Number):
+            W = [W, W]
+        self.W = W
+        self.H = H
 
-__all__ =[
-    "PositionArray",
-    "utils",
-    "methods"
-]
+        self.radi_pattern = {radi_pattern: radi_arg}
+
+        self.array = None
+    
+    def solver(
+            self, 
+            method:Literal["esc", "bw", "pw"]="bw", 
+            *args, **kwargs):
+        
+        p = self.parse_solver(method, *args, **kwargs)
+
+        if method == "esc":
+            xarr, yarr = self._esc(*p)
+        elif method =="bw":
+            xarr, yarr = self._bw(*p) 
+        elif method == "pw":
+            xarr, yarr = self._pw(*p)
+        elif isinstance(method, Callable):
+            xarr, yarr = method(self, *args, **kwargs)
+        else: 
+            raise ValueError("Unkown argument, method: it must be literal or callalbe object")
+        
+        self.array = PositionArray(xarr, yarr)
+
+    
+    def parse_solver(self, method, *args, **kwargs):
+        pass
+    def _esc(self, ):
+
+

@@ -8,7 +8,6 @@ Uniform irradiation light sources are widely used in many industrial and researc
 
 Theorical backgtrounds and further reading sources are written in `theories.ipynb` file in `/docs` directory.
 
-
 ### Language and library dependencies
 
 **Language** 

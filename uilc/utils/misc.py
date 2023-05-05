@@ -4,7 +4,7 @@ from numbers import Number
 
 import numpy as np
 
-float_eps = 1e3*np.finfo(float).eps
+float_eps = 1E3*np.finfo(float).eps
 
 def system_param_check(s:float, W:Tuple[float, float], H:float):
     if not isinstance(s, Number):
@@ -35,9 +35,9 @@ def system_param_check(s:float, W:Tuple[float, float], H:float):
 def d2(x,y):
     return x**2 + y**2
 
-def plane_meshgrid(x_range, y_range, dim):
-    xline = np.linspace(x_range[0], x_range[1], dim[0])
-    yline = np.linspace(y_range[0], y_range[1], dim[1])
+def plane_meshgrid(x_range, y_range, dim, endpoints=[False, False]):
+    xline = np.linspace(x_range[0], x_range[1], dim[0], endpoints[0])
+    yline = np.linspace(y_range[0], y_range[1], dim[1], endpoints[1])
     return np.meshgrid(xline, yline)
 
 def plot_xy_mesh(points, scale, dim):
@@ -52,15 +52,10 @@ def csym_index(N):
 
 def half_ceil(x):
         rho = x - math.floor(x)
-        if rho >= 0.5:
-            result = math.ceil(x)
-        else:
-            result = math.floor(x)
-        return result
+        return math.ceil(x) if rho>=0.5 else math.floor(x)
 def near_integers(x):
         low = math.floor(x)
         return low, low+1 
-        
 def data_ceiling(data, n):
         if n <= 1:
             raise ValueError("n must be greater than 1 and integer.")
@@ -138,7 +133,6 @@ def extend_signal(
     
     return np.concatenate(sigs, axis=0), np.sort(np.concatenate(times, axis=0))
     
-
 def rectangle_line_points(dx, dy, Wx=None, Wy=None, wx=1, wy=1):
     Wx = 0 if Wx is None else Wx
     Wy = 0 if Wy is None else Wy 

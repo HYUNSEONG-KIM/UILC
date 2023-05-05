@@ -1,220 +1,349 @@
-import math
-from functools import partial
-
-from typing import Callable, Tuple, Union
-from numpy.typing import NDArray, ArrayLike
+from typing import Iterable, Union, Callable, Tuple
 from numbers import Number
-from collections.abc import Iterable
+from numpy.typing import NDArray
+from collections.abc import Iterable as iterable_instance
 
+import math
 import numpy as np
-
 from numpy.polynomial.chebyshev import Chebyshev
-from scipy.optimize import bisect
 from convolution import convolve2d
 
-EPS = 10E6*np.finfo(float).eps
+FLOAT_EPS = np.finfo(float).eps # 2.22...e-16
 
-# Discrete version
-def pmf2cdf(prob_mass):
-    n = prob_mass.shape[0]
-    result = np.zeros(n)
-    for i, e in enumerate(prob_mass):
-        result += np.concatenate([np.zeros(i), e*np.ones(n-i)])
-    #result -= result.min()
-    return result
-def pmf2cdf_2d(prob_mass):
-    n, m = prob_mass.shape
-    result = np.zeros(shape=(n, m))
-    for i in range(0, n):
-        for j in range(0,m):
-            row = np.zeros(shape=(i, m)) if i != 0 else None
-            col = np.zeros(shape=(n-i, j)) if j !=0 else None
-
-            add_mass = prob_mass[i,j] * np.ones(shape=(n-i, m-j))
-
-            if col is not None:
-                add_mass = np.concatenate([col, add_mass], axis=1)
-                
-            if row is not None:
-                add_mass = np.concatenate([row, add_mass], axis=0)
-            
-            result += add_mass
-    result -= result.min()
-    return result
-
-def pmf_cond(i, pro_mass, axis =0):# axis=0: x, axis=1: y
-    n,m = pro_mass.shape
-    if axis==0:
-        if not(i>=0 and i<n):
-            raise IndexError("Exceeded data dimension.")
-        pdf = pro_mass[i]
-    elif axis ==1:
-        if not(i>=0 and i<m):
-            raise IndexError("Exceeded data dimension.")
-        pdf = pro_mass[:, i]
-    
-    return pdf /pdf.sum()
-
-def cdf_cond(i, pro_mass, axis=0):# axis=0: x, axis=1: y
-    return pmf2cdf(pmf_cond(i, pro_mass, axis))
-
-
-# Chebyshev approximation
-def get_cheb_approx_pdf(pos_mass, x, region=(None, None)):
-    if pos_mass.shape != x.shape:
-        raise ValueError("Dimensions are not same each others.")
-    
-def get_cheb_approx_cdf_pdf(pos_mass, x, region=(None, None)):
-    if pos_mass.shape != x.shape:
-        raise ValueError("Dimensions are not same each others.")    
-    
-def get_cheb_approx_cdf_pmf(pos_mass, dx, region=(None, None)):
-    return 0
-
-
-# Inverse Transform Sampling
-
-# Direct
-def int_sampling(
-        uni_sam, 
-        pmf= None,
-        cdf = None,
-        domain = None,
-        interpolate = False # 1 dim interpolate between sample points
-        ):
-    if pmf.min() <0 or pmf.max() >1:
-        raise ValueError("Invaild value in probability mass vector. Exceeding range [0,1]")
-    if math.fabs(pmf.sum() -1) > EPS:
-        raise ValueError("Invaild probability mass vector. The sum is not 1.")
-
-    if uni_sam.min() <0 or uni_sam.max() >1:
-        raise ValueError("Invaild value in sample data. Exceeding range [0,1]")
-    if pmf is None and cdf is None:
-        raise ValueError("")
-    
-    if isinstance(domain, Iterable) and len(domain) ==2:
-        domain = np.linspace(domain[0], domain[1], endpoint=True)
-
-    if cdf is None:
-        cdf = pmf2cdf(pmf)
-    
-    if domain is not None and domain.size != cdf.size:
-        raise ValueError("Dimension error, domain and cdf have different dimension.")
-        
-    n = cdf.size
-
-    if interpolate:
-        samples = []
-        for uni_i in uni_sam:
-            if uni_i <= cdf.min():
-                samples.append(0)
-                continue
-            if uni_i >= cdf.max():
-                samples.append(n-1)
-                continue
-            
-            min_sol = np.where(cdf <=uni_i)[0]
-            max_sol = np.where(cdf >=uni_i)[0]
-
-
-            min_index = min_sol.max() if min_sol.size != 0 else None
-            max_index = max_sol.min() if max_sol.size != 0 else None
-
-            if min_index == max_index:
-                if min_index is None:
-                    pass # impossible
-                else:
-                    samples.append(min_index)
-            elif min_index is None or max_index is None:
-                if min_index is None:
-                    samples.append(max_index)
-                else:
-                    samples.append(min_index)
-            else:
-                dy = cdf[max_index] - cdf[min_index]
-                dy_i = uni_i - cdf[min_index]
-                dx_i = dy_i / dy
-                samples.append(min_index + dx_i)
-        result = np.array(samples)
-    else:
-        results = []
-        uni_sam.sort()
-
-        for i, c_i in enumerate(cdf):
-            uni_index = np.where(uni_sam <= c_i)[0]
-            if uni_index.size == 0:
-                continue
-            results.append(i*np.ones(uni_index.size))
-            uni_sam = uni_sam[uni_index.size:]
-
-        if domain is not None:
-            for i in range(0, len(results)):
-                results[i] *= domain[i]
-
-        result = np.concatenate(results)
-        
-    return result
-
-# Continuous version
-## Root finding
-def int_sampling_root(
-        uni_sam,
-        cdf:Callable,
-        domain
-    ):
-    a, b = domain
-    if a > b:
-        a, b = b, a
-
-    cdf = lambda x: cdf()
-    result = []
-    for uni_s in uni_sam:
-        result.append(bisect(lambda x: cdf(x) - uni_s, *domain))
-    return np.array(result)
-
-# SVD Chebyshev approximation
-# Reference Cheb2fun 2d 
+Number_Full= Union[Number, np.inf, np.NINF] # Common real number, infty, -infty
 SingleFunction = Callable[[Number], Number]
-Callable_check = np.frompyfunc(callable, 1, 1)
-def Cheby_stage_params(i):
-    i +=1
-    return int(2**(i+2)+1), int(2**(i)+1)
-def get_xy_decompose(
-        f:Callable, 
-        point:Tuple[Number, Number], 
-        domain:Tuple[Number, Number, Number, Number], 
-        cheby_deg: int):
-    a, b, c, d = domain
-    x, y = point
-    # v(x)
-    vx_list = cheby_root_grid(a, c, cheby_deg+1)
-    vy_list = np.full_like(vx_list, y)
-    vz_list = f(vx_list, vy_list)
 
-    v_i = Chebyshev.fit(vx_list, vz_list, deg=cheby_deg, domain=(a, c))
+ChebFuncPref = {
+    "domain": [-1, 1],
+    "splitting": 0,
+    "splitPrefs" : {"splitLength": 160, "splitMaxLength":6000},
+    "blowup": 0,
+    "blowupPrefs":{
+        "exponentTol": 1.100000e-11,
+        "maxPoleorder": 20,
+        "defaultSingType": 'sing'
+        },
+    "enableDeltaFunctions": 1,
+    "deltaPrefs": {
+        "deltaTol":     1.000000e-09,
+        "proximityTol": 1.000000e-11
+        },
+    "cheb2Prefs": {
+        "chebfun2eps":              2.220446e-16,
+        "maxRank":                  513,
+        "sampleTest":               1
+        },
+    "cheb3Prefs": {
+        "chebfun3eps":              2.220446e-16,
+        "maxRank:":                  128,
+        "sampleTest":               1,
+        "constructor":              "chebfun3f"
+        },
+    "tech":                         "@chebtech2",
+    "techPrefs": {
+        "chebfuneps":              2.220446049250313e-16,
+        "minSamples":               17,
+        "maxLength":                65537,
+        "fixedLength":              np.NaN,
+        "extrapolate":              0,
+        "sampleTest":               1,
+        "refinementFunction":       'nested',
+        "happinessCheck":           'standard',
+        "useTurbo":                 0
+        }
+}
 
-    # u(y)
-    uy_list = cheby_root_grid(b, d, cheby_deg+1)
-    ux_list = np.full_like(uy_list, x)
-    uz_list = f(ux_list, uy_list)
 
-    u_i = Chebyshev.fit(uy_list, uz_list, deg=cheby_deg, domain=(b, d))
-    return v_i, u_i
-def get_samples_from_pivots(pivots, domain, cheby_deg):
-    xi, yi, xf, yf = domain
+
+def cheby_range_transform(x, a, b): # [-1, 1] -> [a, b]
+    return ((b-a)/2)*x + (b+a)/2
+def cheby_range_inv_transform(x, a, b): # [a, b] -> [-1, 1]
+    return (2/(b-a))*x - (b+a)/(b-a)
+def cheby_ext_grid_1(a, b, n):
+    x_i = np.cos((np.pi/n-1)*np.arange(n))
+    return cheby_range_transform(x_i, a, b)
+def cheby_root_grid_1(a, b, n): # Same with "chebypts(n, (a,b), 1)""
+    x_i = np.cos((np.pi/n)*(0.5+np.arange(n)))
+    return cheby_range_transform(x_i, a, b)
+
+def chebpts(n, domain=[-1, 1], pol_type = 2):
+    if pol_type ==2:
+        x = np.cos(np.pi/(n-1)*np.arange(n)) if n>1 else np.ones(1)
+    elif pol_type ==1:
+        x = np.cos((np.pi/n)*(0.5+np.arange(n)))
+    return cheby_range_transform(x, domain[0], domain[1])
+
+def trigpts(n, dom):
+    x_i, x_f = dom
+    size =(x_f - x_i )/2
+    center = (x_f+ x_i)/2
+    x = np.linspace(-np.pi, np.pi, n+1)/np.pi
+    x_center = (x[0] + x[-1])/2
+    return size*(x-x_center) + center
+
+
+def _ge_pivots(vals:NDArray, tol_abs:Number, factor:Number): #= completeACA
+
+        [nx, ny] = vals.shape
+        width = min(nx, ny)
+        pivots_value = [0]
+        pivots_elements = [[0,0]]
+        ifail = 1
+
+        z_rows = 0
+        ind = np.argmax(vals)
+        row, col = divmod(ny, ind) # ind2suv
+        infNorm = np.abs(vals[row, col])
+
+        # Diagonal bias 
+        if nx == ny and np.max(np.abs(vals.diagonal())) - infNorm > - abs_tol:
+            ind = np.argmax(np.abs(vals.diagonal()))
+            row = ind
+            col = ind
+            infNorm = np.abs(vals[row,col])
+
+        scl = infNorm
+
+        if np.abs(scl - 0) < FLOAT_EPS:
+            pivot_value = 0.
+            rows = np.zeros()
+            cols = np.zeros()
+            ifail = 0
+        else:
+            rows = np.zeros((1, vals.shape[1]))
+            cols = np.zeros((vals.shape[0], 1))
+            
+
+        while (infNorm > tol_abs and z_rows < width/factor ):
+            row_vec = vals[:, col].reshape(-1, 1)
+            col_vec = vals[row ,:].reshape(1, -1)
+            pivot_val = vals[row, col]
+            dvals = (convolve2d(row_vec, col_vec))/pivot_val
+            vals = vals - dvals
+            
+            z_row += 1
+            row ,col = divmod(np.argmax(np.abs(vals)), vals.shape[1])
+
+            pivot_value.append(pivot_val)
+            pivots_elements.append([row, col])
+
+            if nx == ny and np.max(np.abs(vals.diagonal())) - infNorm > - tol_abs:
+                ind = np.argmax(np.abs(vals.diagonal()))
+                row = ind
+                col = ind
+                infNorm = np.abs(vals[row,col])
+
+        ifail = 0 if infNorm <= tol_abs else ifail
+        ifail = 1 if z_rows >= width/factor else ifail 
+
+        return np.array(pivot_value), np.array(pivots_elements), rows, cols, ifail
+def _get_tol(X, Y, vals, domain, pseudo_level):
+        #Done
+        nx, ny = vals.shape
+        grid = max(nx, ny)
+        dfdx = 0
+        dfdy = 0
+
+        if nx > 1 and ny >1 :
+            dfdy = np.diff(vals[:, :], axis=1) / np.diff(Y[:-1, :], axis=1)
+            dfdx = np.diff(vals[:, :], axis=0) / np.diff(X[:, :-1], axis=0)
+        elif nx >1 and ny ==1:
+            dfdx = np.diff(vals, axis=1) / np.diff(X, axis=1)
+        elif nx == 1 and ny>1:
+            dfdy = np.diff(vals, axis=0) / np.diff(Y, axis=0)
+        
+        jac_norm = np.max(np.maximum(np.abs(dfdx), np.abs(dfdy)))
+        vscale = np.max(np.abs(vals))
+        rel_tol = grid**(2/3) * pseudo_level
+        abs_tol = np.max(np.abs(domain)) * np.max(jac_norm, vscale) * rel_tol
+        return rel_tol, abs_tol
+def _point_mesh(nx:int, ny:int, dom = [-1, 1, -1, 1], fx_type=2, fy_type=2):
+    # type: 0: tri, 1: T of 1st kind, 2: U, of 2nd kind
+    x_i, x_f, y_i, y_f = dom
+    x_arr = chebpts(nx, (x_i, x_f), pol_type=fx_type) if fx_type != 0 else trigpts(nx, (x_i, x_f)) 
+    y_arr = chebpts(ny, (y_i,y_f), pol_type=fy_type) if fx_type != 0 else trigpts(nx, (y_i, y_f)) 
+    return np.meshgrid(x_arr, y_arr)
+
+def _grid_refine(n:int, f_type:int):
+    if f_type == 0: # tri
+        grid =  2**(math.floor(math.log2(n)+1))
+        nesting = np.arange(0, grid, 2) # matlab "1: 2: grid"
+    elif f_type == 1:
+        grid = 3*n
+        nesting = np.arange(1, grid, 3)
+    elif f_type == 2:
+        grid = 2**(math.floor(math.log2(n)+1)) +1
+        nesting = np.arange(0, grid, 2)
+
+    return grid, nesting
+
+
+
+class ChebFun2: # Only support smooth function
+    factor = 4 # ratio between size of matrix and number of pivots.
+    def __init__(self, 
+                 func_x=Union[None, Tuple[Callable]], 
+                 func_y=Union[None, Tuple[Callable]], 
+                 weights=None,
+                 domain = [-1, 1, -1, 1]):
+        self.func_x = [func_x] if func_x is not None else [] # col vector
+        self.func_y = [func_y] if func_y is not None else [] # row vector
+        
+        n = len(self.func_x)
+        if weights is None:
+            self.weights = np.array([], dtype=float)
+        elif isinstance(weights, (iterable_instance, Number)):
+            weights = np.array(weights)
+            s = weights.shape
+            ns = len(s)
+            if ns >2 :
+                weights = weights.reshape((n,n))
+            if ns ==1:
+                self.weights = np.zeros((n,n))
+                np.fill_diagonal(self.weights, weights)
+            elif ns ==2:
+                self.weights = weights 
+    @property
+    def rank(self):
+        return np.max(self.weights.shape)
+    def __str__(self):
+        return "Chebfun2 object, domain:{self.domain}, rank:{self.rank}, eps:{self.eps}"
+    def __call__(self, x, y): # Support numpy mesh array
+        if self.func_x is None:
+            return 0 if not isinstance(x, np.ndarray) else np.zeros(x.shape)
+        if not isinstance(x, np.ndarray):
+            f_x_v = np.fromiter((f(x) for f in self.func_x), dtype=np.dtype(float))
+            f_y_v = np.fromiter((f(y) for f in self.func_y), dtype=np.dtype(float))
+            return np.einsum("i,ij,j", f_y_v, self.weights, f_x_v)
+        # 2 dim mesh
+        shape = x.shape
+        if len(shape) != 1: 
+            x = x.reshape(-1)
+            y = y.reshape(-1)
+        if len(x) != len(y):
+            raise ValueError("x, y values must have same dimension.")
+        fx_v = np.vstack(f(x) for f in self.func_x)
+        fy_v = np.vstack(f(y) for f in self.func_y)
+        try:
+            result = np.einsum("ji,jk,ki->i",fy_v, self.weights, fx_v).reshape(shape)
+        except:
+            print(fy_v.shape, self.weights.shape, fx_v.shape)
+            raise ValueError("See above message")
+        return result
+    def __add__(self, outer):
+        pass
+    def __sub__(self, outer):
+        pass
+    def __mul__(self, outer):
+        pass
+    def diff(self, axis=None):
+        pass
+    def integral(self, axis=1):
+        pass
+    @classmethod
+    def constructor(cls, 
+                 func:Callable, 
+                 domain:Tuple[float, ...], # infty range can be passed in 
+                 istri=False,
+                 isequi = False,
+                 samples:Tuple[int, ...] = [17, 17],
+                 max_rank =None,
+                 float_eps = None #=pseudo_level
+                 ):
+        if callable(func):
+            if isinstance(func, ChebFun2): # copy the objects
+                pass
+            pass
+        elif isinstance(func, iterable_instance): # Assum all elements are callable
+            pass
+
+        if float_eps is None:
+            float_eps = FLOAT_EPS
+
+        if len(samples) > 4:
+            samples = samples[:4]
+        
+        if len(samples) == 3:
+            samples.append(samples[-1])
+        elif len(samples) == 2:
+            samples.append()
+        
+        if len(samples) == 4 :
+            min_sample = samples[:2]
+            max_sample = samples[2:4]
+
+        prefx=  {}
+        prefy= {}
+            
+        resolved = False
+        failed = False
+        min_sample:Tuple[int, int] =  2**(np.log2()) + (0 if istri else 1) 
+        #--------------------------------
+        while(not resolved and not failed):
+            grid = min_sample
+            X, Y = _point_mesh(*grid, domain, prefx, prefy)
+            vals = func(X, Y)
+
+            vscale = np.max(np.abs(vals))
+            if np.isinf(vscale):
+                raise RuntimeError(f"The given function has some singular values in the given domain:{domain}")
+            elif np.isnan(vals):
+                raise RuntimeError(f"The given function failed to evaluate function value in the given fomain {domain}")
+            
+            
+            tol_rel, tol_abs = _get_tol(X, y, vals, domain, float_eps)
+            
+            # Stage 1: Pivot searching
+            [  pivot_values, pivot_position, 
+                func_y, func_x, ifail
+            ] = _ge_pivots(vals, tol_abs, cls.factor)
+            strike = 1
+        
+            while(
+                resolved and  (grid <= cls.factor*(max_rank -1)+1) and strike < 3
+                ):
+                grid = _grid_refine(grid, prefx, prefy)
+                
+                X, Y = _point_mesh(*grid, domain, prefx, prefy)
+                vals = func(X,Y)
+                vscale = np.max(np.abs(vals))
+
+                tol_rel, tol_abs=  _get_tol(X, Y, vals, domain, float_eps)
+
+                [  pivot_values, pivot_position, 
+                    func_y, func_x, ifail
+                ] = _ge_pivots(vals, tol_abs, cls.factor)
+                if np.abs(pivot_values) < 1E4*vscale*tol_rel:
+                    strike +=1
+            
+            if np.any(grid > cls.factor * (max_rank-1) + 1):
+                raise RuntimeWarning("Not a low-rank function")
+                failed = True
+            
+            # Pivot slices resolve checking
+
+
+            # Stage 2
+
+            
+
+
+
+            rel_tol, abs_tol = self._get_tol(X, Y, Vals, domain, pseudo_level=float_eps)
+
+        resolved # = isHappy
+
+        # Stage 2: Resolve column and row slices
+        pass
     
-    p_x, p_y = pivots.T
-    
-    x_list = cheby_root_grid(xi, xf, cheby_deg+1)
-    y_list = cheby_root_grid(yi, yf, cheby_deg+1)
-    
-    s_x1, s_y1 = np.meshgrid(p_x, y_list)
-    s_x2, s_y2 = np.meshgrid(x_list, p_y)
-    
-    s_x = np.vstack([s_x1, s_x2.reshape(s_x1.shape)])
-    s_y = np.vstack([s_y1, s_y2.reshape(s_y1.shape)])
-    return np.array([s_x, s_y])
-    
+    @classmethod
+    def from_numeric_data(self, data:NDArray, domain):
+        pass
+
+
+#---------------------------------------------------
+
+# Old =================
 class RankApprox2dim:
     def __init__(self, 
                  fx_list:Union[SingleFunction, Iterable[SingleFunction]], 
@@ -308,8 +437,7 @@ class RankApprox2dim:
         if not Callable_check(fy_list).all():
             raise TypeError("fy list must consist of callable objects.")
         if  not np.issubdtype(weights.dtype, np.number):
-            raise TypeError("Weight must consist of number type.")
-    
+            raise TypeError("Weight must consist of number type.") 
     @classmethod
     def from_function_approx(cls, 
                              f:Callable, 
@@ -418,7 +546,6 @@ class RankApprox2dim:
             # del from a to b elements
             pass
 
-
     #--------------------------------------------------------------------------------
     def add_infos(self, **kwargs):
         for key in kwargs.keys():
@@ -495,7 +622,6 @@ class RankApprox2dim:
     @property
     def rank(self):
         return self._weights.size
-
 class GeApprox:
     def __init__(self, func_x=None, func_y=None, weights=None):
         self.func_x = [func_x] if func_x is not None else None
@@ -597,58 +723,4 @@ class GeFun(GeApprox):
    
 
 # Chebyshev----------------------------------------------------
-from numpy.polynomial.chebyshev import Chebyshev
-def cheby_range_transform(x, a, b): # [-1, 1] -> [a, b]
-    return ((b-a)/2)*x + (b+a)/2
-def cheby_range_inv_transform(x, a, b): # [a, b] -> [-1, 1]
-    return (2/(b-a))*x - (b+a)/(b-a)
-def cheby_ext_grid(a, b, n):
-    x_i = np.cos((np.pi/n-1)*np.arange(n))
-    return cheby_range_transform(x_i, a, b)
-def cheby_root_grid(a, b, n):
-    x_i = np.cos((np.pi/n)*(0.5+np.arange(n)))
-    return cheby_range_transform(x_i, a, b)
-#--------------------------------------------------
-def function_vec(f_arr, x, multi=False): # Array of functions apply to x value
-    if multi:
-        return np.fromiter((fi(*x) for fi in f_arr), dtype=np.dtype(type(x)))
-    else:
-        return np.fromiter((fi(x) for fi in f_arr), dtype=np.dtype(type(x)))
-def cal_f_xy_approx(x, y, f_x, f_y, coefs):
-    f_x_v = function_vec(f_x, x)
-    f_y_v = function_vec(f_y, y)
-    return coefs.dot(f_x_v.dot(f_y_v))
-f_xy_approx_vec = np.vectorize(cal_f_xy_approx, excluded=["f_x", "f_y", "coefs"])
-
-def u(x, f, domain, deg): # return u(y)=f(x_i, y) Chebyshev approximation
-    a, b, c, d = domain
-    
-    y_list = np.linspace(b, d, deg+1, endpoint=True)
-    x_list = np.full_like(y_list, x)
-    z_list = f(np.hstack(x_list, y_list))
-    u_i = Chebyshev.fit(y_list, z_list, deg=deg, domain=domain)
-    return u_i
-def v(y, f, domain, deg):# return v(x)= f(x, y_i) Chebyshev approximation
-    a, b, c, d = domain
-    
-    x_list = np.linspace(a, c, deg+1, endpoint=True)
-    y_list = np.full_like(x_list, y)
-    z_list = f(np.hstack(x_list, y_list))
-    v_i = Chebyshev.fit(x_list, z_list, deg=deg, domain=domain)
-    return v_i
-def u_i(xy_list, index, f, domain, deg):
-    x, y = xy_list[index]
-    return u(x, f, domain, deg)
-def v_i(xy_list, index, f, domain, deg):
-    x, y = xy_list[index]
-    return v(y, f, domain, deg)
-def ge_approx(xy_points, f, domain, chebyshev_deg=100):
-    z = f(*xy_points.transpose())
-    max_i = np.argmax(z)
-    u_func = [u_i(xy_points, max_i, f, domain, chebyshev_deg)]
-    v_func = [v_i(xy_points, max_i, f, domain, chebyshev_deg)]
-    d_coef = [1/(f(*xy_points[max_i]))]
-    for point in xy_points:
-        pass
-
 

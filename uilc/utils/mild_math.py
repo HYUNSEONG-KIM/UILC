@@ -22,7 +22,7 @@ def near_integers(x:float)->int:
         low = math.floor(x)
         return low, low+1 
 # Matrix -vector routines---------------------------------------------
-def arithmetic_sequence(N:int)->np.ndarray:
+def arithmetic_sequence(N:int)->np.ndarray: # = np.arange(N)+1
     return np.array([i+1 for i in range(0,N)])
 def center_sym_index(N:int)->np.ndarray:
     return np.array([(i-(N-1)/2) for i in range(0, N)])
@@ -43,6 +43,7 @@ def region_mesh(
         y_r = (scale_y * yi, scale_y * yf)
         return array2meshgrid(x_r, y_r, dim), [*x_r, *y_r] 
 
+# Matrix
 def diff_matrix(n:int)->np.ndarray:
     return np.array([[1 if i == j else (-1 if i-j == 1 else 0) for j in range(0,n)] for i in range(0,n)])
 def inv_diff_matrix(n:int)->np.ndarray:

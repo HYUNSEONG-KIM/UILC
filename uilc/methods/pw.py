@@ -14,22 +14,22 @@ from uilc.utils.mild_math import half_ceil, extend_signal
 from uilc.utils.mild_math import diff_matrix, inv_diff_matrix
 from uilc.utils.radiation import gaussian, lambertian
 from uilc.utils.convolution import convolve2toeplitz, restore_data
-
+from uilc.utils.mild_math import diff_matrix, inv_diff_matrix, position_array, propagation_matrix
 
 hyper2F1 = get_mpmath_hyper()
 
 # Math utils
-def diff_matrix(n:int):
-    return np.array([[1 if i == j else (-1 if i-j == 1 else 0) for j in range(0,n)] for i in range(0,n)])
-def inv_diff_matrix(n:int):
-    return np.array([[1 if i >= j else (0) for j in range(0,n)] for i in range(0,n)])
-# Radiation matrix
-def position_array(W, n):
-    d = W/n
-    return np.array([-W/2+d/2+(i-1)*d for i in range(1,n+1)])
-def propagation_matrix(n:int, W:float, radiation:Callable[[int, int], float])->np.ndarray:
-    d= W/n
-    return np.fromfunction(lambda i, j: radiation(d*i, d*j), (n,n), dtype=float) 
+#def diff_matrix(n:int):
+#    return np.array([[1 if i == j else (-1 if i-j == 1 else 0) for j in range(0,n)] for i in range(0,n)])
+#def inv_diff_matrix(n:int):
+#    return np.array([[1 if i >= j else (0) for j in range(0,n)] for i in range(0,n)])
+## Radiation matrix
+#def position_array(W, n):
+#    d = W/n
+#    return np.array([-W/2+d/2+(i-1)*d for i in range(1,n+1)])
+#def propagation_matrix(n:int, W:float, radiation:Callable[[int, int], float])->np.ndarray:
+#    d= W/n
+#    return np.fromfunction(lambda i, j: radiation(d*i, d*j), (n,n), dtype=float) 
 
 def _solve_discretized(n, s, W, H, getfd=False):
     F = propagation_matrix(n, W, lambda i,j: lambertian( i, j, s, H))

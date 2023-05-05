@@ -2,8 +2,7 @@ from scipy import special as sp
 from numpy import finfo
 import math
 
-EPS = finfo(float).eps *1000
-
+EPS = finfo(float).eps *1E3
 
 def hyper2F1(a, b, c, z):
         if z> 1:

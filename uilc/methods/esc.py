@@ -26,7 +26,7 @@ def _op_func_linear(D:float, s:float, N:int)->float: # _linear
         y += (1-(s+3)*(N+1-2*i)**2 * (D**2)/4)*((N+1-2*i)**2 * (D**2)/4 +1)**(-(s+6)/2)
     return y
 
-def _op_func_rectangularangular(D:float, s:float, N:int, M:int)->float: # _rectangularangular
+def _op_func_rectangular(D:float, s:float, N:int, M:int)->float: # _rectangularangular
     y =0.0
     for i in range(1,N+1):
         for j in range(1, M+1):
@@ -55,14 +55,14 @@ def _coef_rectangular( s:float, N:int, M:int, approx:bool=False)->Tuple[float, f
         cof= math.sqrt(1.2125/(s-3.349))
     else:
         try:
-            sol = root_scalar(lambda D: _op_func_rectangularangular(D, s, N, M), bracket=[0,1],method="brentq")
+            sol = root_scalar(lambda D: _op_func_rectangular(D, s, N, M), bracket=[0,1],method="brentq")
             if sol.converged == False:
-                res = minimize_scalar(lambda D: _op_func_rectangularangular(D, s, N, M), bounds=(0,1), method = "bounded")
+                res = minimize_scalar(lambda D: _op_func_rectangular(D, s, N, M), bounds=(0,1), method = "bounded")
                 cof= res.x
             else:
                 cof= sol.root
         except:
-            res = minimize_scalar(lambda D: _op_func_rectangularangular(D, s, N, M), bounds=(0,1), method = "bounded")
+            res = minimize_scalar(lambda D: _op_func_rectangular(D, s, N, M), bounds=(0,1), method = "bounded")
             cof= res.x
     return cof
 

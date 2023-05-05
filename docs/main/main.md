@@ -114,12 +114,27 @@ $$\{\overbrace{x_1, x_2, ... , x_{m-1} }^\mathbf{Q}, \underbrace{x_m ,...,x_{n-1
 
 $$\sum_{i=1}^n I_c (x_i) = \sum_{i=1}^n I_b (x_i) $$
 
+Now considering $\mathbf{P}$ region sources, 
+
+$$\{x_j\}_{j=1}^{n_p}, x_j \in \mathbf{P}$$
+
+KDE + $D$ function interpolation can be adopted to get $\mathbf{R}$ sources corresponding sources for $\mathbf{P}$.
+
+
+1. $x_{q, i}, x_{r, i} \rightarrow Di(x_{q, i}) + Di(x_{r, i}) = 0$
+2. For $k$ such that $x_k \in \mathbf{Q}, x_{k+1} \in \mathbf{R}$, $|x_{k+1} -x_k| \approx d = avg(d_q)$.
+3. Search corresponding points on $R$ region: 
+    1. Calculate radiation, $I_{pqr}$ of $p, q, r_q$ sources.
+    2. $\Epsilon: = (I_{pqr})_{max} - I_{pqr}$.
+    3. Continuouse gauss elimination on $[x_e, W/2]$ region.
+
+
 Practical approximation are next equations.
 
 $$x_m = (\sqrt{2^{\frac{2}{s+2}}-1}) \cdot H$$
 $$x_e = (\frac{1}{6}d_m + \frac{1}{4}\alpha) \cdot H$$
 
-These are assumed as initial guessing in finding algorithm. 
+These are assumed as initial guessing points in finding algorithm. 
 
 ---
 
@@ -288,7 +303,7 @@ Since, positive kernel is implicated to convolution system the transformed matri
 
 We can get power weight map for the given region.
 
-If we can allocating power to the dimension, it is enough to apply to design.
+If we can allocating power to the dimension, it is enough to apply to design optimization algorithm.
 For whom want to get a result for source distribution, we can use local quatization of power weight map for each non zero points.
 
 1 dimension:
@@ -396,3 +411,16 @@ The 2-dim inverse transform method is well described the preprint written by Olv
 >http://www.chenq.ecei.tohoku.ac.jp/common/item/pdf/ronbun/2022_5_K-Mochiki.pdf
 
 >Optical design of a compact multispectral LED light source with high irradiance and uniformity 
+
+
+
+From the non-parametric estimation method, Weighted kernel density estimation. 
+
+$$\hat{f_k} = \frac{1}{n} \sum_{i} w_i K(X-x_i, h)$$
+
+The binary solution, $\{x_j'\}_{j=1}^{n'}$, is 
+
+$$\frac{1}{n} \sum_{i} w_i K(X- x_i, h) = \lambda_{n'}\sum_{j}^{n'}K'(X - x_i', h')$$
+
+We get weighted samples from NNLS solution of 2D convolution. The inverse sampling method with uniform $Y$, on $0-1$ range.
+The 2D inverse sampling method is investigated by *Chebfun2* and its related project, the python implmentation is presented in *Supplement Materials*. 
