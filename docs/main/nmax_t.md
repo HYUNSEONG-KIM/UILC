@@ -2,6 +2,11 @@
 
 ## Hypergeometric function ${}_2 F_1$
 
+Analytic continuation, integrated introduction
+
+> https://core.ac.uk/download/pdf/82108003.pdf
+
+
 
 Definition: 
 
@@ -28,7 +33,8 @@ $$\frac{d}{dz} {}_2F_1(a, b, c ;z) = \frac{a b}{c} {}_2F_1(a+1, b+1, c+1; z)\\
 = \frac{a}{z} \left({}_2F_1(a+1, b, c ;z) - {}_2F_1(a, b, c ;z)  \right)
 $$
 
-See "Contiguous relations for ${}_2F_1$ hypergeometric series", for below formula of the derivation.
+See "Contiguous relations for ${}_2F_1$ hypergeometric series", for the general version of above formula of the derivation.
+
 
 ### Transformation
 
@@ -57,11 +63,47 @@ $$ R_{Lamber}(x,t) = R_{Lamber}(|x-t|) \\
 
 ---
 
+See similar and more general proves in
+
+> https://www.sciencedirect.com/science/article/pii/S0021904508002116#sec3
+
+Differentiation of 2F1 function
+
+> https://www.sciencedirect.com/science/article/pii/S1110256X1200020X
+
 For, $t \in \R^+\backslash \{ 0 \}, b \in \R^+, n \in \N^+ \backslash \{ 0 \}$,
 
 $$\int_{-t}^t (1+x^{2n})^{-b} dx = 2 \int_0^t (1+x^{2n})^{-b} dx \\
 = 2 t \cdot {}_2F_1 \left( \frac{1}{2n}, b, \frac{1}{2n}+1, -t^{2n} \right)$$
 
+Proof:
+
+$x= t \cdot s \rightarrow dx = t ds$
+
+$$2 \int_0^t (1+x^{2n})^{-b} dx = 2t \int_0^1 (1-(-t^{2n}) s^{2n})^{-b} dx$$
+
+$s^{2n} = l \rightarrow ds = \frac{l^{(1/2n) -1}}{2n} dl$
+
+$$2t \int_0^1 (1-(-t^{2n}) s^{2n})^{-b} dx = \frac{2t}{2n} \int_0^1 \frac{l^{1/{2n} -1}}{(1-(-t^{2n}) l)^{b}} dl$$
+
+Let, $c = \frac{1}{2n}+1$ and $a = \frac{1}{2n}$
+
+$${}_2F_1(a, b, c; z) = \frac{\Gamma(c)}{\Gamma(b)\Gamma(c-b)} \int_0^1 \frac{t^{b-1} (1-t)^{c-b-1}}{(1-tz)^a} dt $$ 
+where, $\mathbf{R}(c) > \mathbf{R}(b) >0$
+
+and (See Gamma recurrence relationship of DMLF)
+
+$$\Gamma(z+1) = z \Gamma(z)$$
+
+Thus,
+
+$${}_2F_1(a, \frac{1}{2n}, \frac{1}{2n} +1 ; z) = \frac{1}{2n} \int_0^1 \frac{t^{1/2n -1}}{(1-zt)^a} dt$$
+
+and
+
+$$\int_{-t}^t (1+x^{2n})^{-b} dx = 2 t \cdot {}_2F_1 \left( \frac{1}{2n}, b, \frac{1}{2n}+1, -t^{2n} \right) $$
+
+---
 
 $$\because  (1+x^{2n})^{-b_1} \geq (1+x^{2n})^{-b_2} > 0 \\ \forall x \in \R, \forall b_1, b_2 \text{ s.t } 0< b_1 < b_2$$
 
@@ -84,7 +126,14 @@ $$\because   {}_2F_1(a, b, c ; z) = (1-z)^{-b} {}_2F_1(c-a, b, c ;\frac{z}{z-1})
 
 $$\frac{d}{dt}{}_2F_1 \left(\frac{1}{2n}, b, \frac{1}{2n}+1; -t^{2n}  \right) = \frac{1} {t(1+t^{2n})^{b}} \left( 1 - {}_2F_1 \left(1, b, \frac{1}{2n}+1; \frac{t^{2n}}{1+ t^{2n}}  \right) \right) $$
 
-Since ${}_2F_1 \left(1, b, \frac{1}{2n}+1; \frac{t^{2n}}{1+ t^{2n}}  \right) \geq 1,  \forall t >0$, $f(t) = {}_2F_1 \left(\frac{1}{2n}, b, \frac{1}{2n}+1; -t^{2n}  \right)$ is monotonic decreasing $t >0$ and bounded $0 \leq {}_2F_1 \leq 1$.
+Since ${}_2F_1 \left(1, b, \frac{1}{2n}+1; \frac{t^{2n}}{1+ t^{2n}}  \right) > 1,  \forall t >0$, $f(t) = {}_2F_1 \left(\frac{1}{2n}, b, \frac{1}{2n}+1; -t^{2n}  \right)$ is monotonic decreasing $t >0$ and bounded $0 \leq {}_2F_1 \leq 1$.
+
+Proof of ${}_2F_1 \left(1, b, \frac{1}{2n}+1; \frac{t^{2n}}{1+ t^{2n}}  \right) >1$, let $z = \frac{t^{2n}}{1+ t^{2n}}$ then $0<z<1, \forall t>0$
+
+$${}_2F_1 \left(1, b, \frac{1}{2n}+1; z  \right) = \frac{\Gamma(\frac{1}{2n}+1)}{\Gamma(1) \Gamma(\frac{1}{2n})} \int_0^1 \frac{(1-s)^{\frac{1}{2n}-1}}{(1-zs)^b} ds$$
+
+$$$$
+$$\because \frac{\Gamma(\frac{1}{2n}+1)}{\Gamma(1) \Gamma(\frac{1}{2n})} = \frac{1}{2n}, (1-zs)^b < 1$$
 
 That is, 
 
