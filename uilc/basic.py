@@ -1,15 +1,28 @@
-from typing import Tuple, Iterable, Union, Callable, Literal
+from typing import NewType, Tuple, Iterable, Union, Callable, Literal, Optional
 from numbers import Number
 import math 
 
 import numpy as np
+from numpy import ndarray
 from scipy.optimize import root_scalar, minimize_scalar
 
 from uilc.utils.misc import float_eps, csym_index
 
-class PositionArray(np.ndarray):
-    def __new__(cls, input_array, *args, **kwargs):
+# Additional Types
+UINT = NewType("Unsigned int", int)
+
+class PositionArray(ndarray):
+    """Light source array on flat plane.
+    
+    :param input_array: Iterable
+    """
+    def __new__(cls, input_array:Iterable[float], *args, **kwargs):
         obj = np.asarray(input_array, *args, **kwargs).view(cls)
+        
+        #Additional attributes----------------------------------------
+        obj.d = np.array([[0., 0.]]) # x, y unit distance between sources. It can be vary by the dimension.
+        obj.position = np.array([0, 0, 0]) # Global position of array
+        
         return obj
     def __array_wrap__(self, out_arr, context=None):
         return super().__array_wrap__(self, out_arr, context)
@@ -64,8 +77,25 @@ class PositionArray(np.ndarray):
         return results[0] if len(results) == 1 else results
     #-------------------------------------------------
     @classmethod
-    def from_arrays(cls, xarr, yarr=np.array([0.])):
-        xarr = np.array(xarr)[::-1]
+    def from_arrays(cls, 
+                    xarr:Iterable[float], 
+                    yarr:Iterable[float]=np.array([0.])):
+        """Generate position array from the given two 1 dim linear array.
+
+        Args:
+            xarr (Iterable[float]): 1 dim posiiton array of x axis.
+            yarr (Iterable[float], optional): 1 dim posiiton array of y axis. Defaults to np.array([0.]).
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            _type_: _description_
+        """
+        xarr = np.sort(xarr) # sort the array
+        yarr = np.sort(yarr)
+        
+        xarr = np.array(xarr)[::-1] #? why?
         yarr = np.array(yarr)
 
         if len(xarr.shape) != 1 or len(yarr.shape) != 1:
@@ -73,7 +103,24 @@ class PositionArray(np.ndarray):
         return cls(np.flip(np.array(np.meshgrid(yarr,xarr)).transpose(), axis=None))
     
     @classmethod
-    def from_meshgrid(cls, meshx, meshy=None, indexing="xy"):
+    def from_meshgrid(cls, 
+                      meshx:ndarray, 
+                      meshy:Optional[ndarray]=None, 
+                      indexing:Literal["xy", "ij"]="xy"):
+        """_summary_
+
+        Args:
+            meshx (ndarray): _description_
+            meshy (Optional[ndarray], optional): _description_. Defaults to None.
+            indexing (Literal[&quot;xy&quot;, &quot;ij&quot;], optional): _description_. Defaults to "xy".
+
+        Raises:
+            ValueError: _description_
+            ValueError: _description_
+
+        Returns:
+            _type_: _description_
+        """
         if meshy is None and len(meshx) ==2:
             meshx, meshy = meshx
         if meshx.shape != meshy.shape:
@@ -91,7 +138,18 @@ class PositionArray(np.ndarray):
         return cls(np.transpose(arr, axes=(1, 0, 2)))
     
     @classmethod
-    def uniform(cls, d_t, N_t):
+    def uniform(cls, 
+                d_t:float|Tuple[float, float], 
+                N_t:UINT|Tuple[UINT, UINT]):
+        """_summary_
+
+        Args:
+            d_t (float | Tuple[float, float]): _description_
+            N_t (UINT | Tuple[UINT, UINT]): `UINT` is an unsigned int type.
+
+        Returns:
+            _type_: _description_
+        """
         if isinstance(d_t, Iterable):
             d_t = list(d_t)
         else:
@@ -126,7 +184,18 @@ class PositionArray(np.ndarray):
         return cls.from_arrays(xarr, yarr) 
     
     @classmethod
-    def uniform_fill(cls, W, N_t):
+    def uniform_fill(cls, 
+                     W:float|Tuple[float, float], 
+                     N_t:UINT|Tuple[UINT, UINT]):
+        """_summary_
+
+        Args:
+            W (float | Tuple[float, float]): _description_
+            N_t (UINT | Tuple[UINT, UINT]): _description_
+
+        Returns:
+            _type_: _description_
+        """
         Nx, Ny = N_t
         Wx, Wy = W
 
@@ -138,7 +207,7 @@ class PositionArray(np.ndarray):
     
     def check_dim(self):
         shape = self.shape
-        if len(shape) != 3 or len(shape) == 3 and len(self[0][0]) !=2 :
+        if len(shape) != 3 or (len(shape) == 3 and len(self[0][0]) !=2) :
             raise ValueError("Not a 2 dimensional array of tuple.")
     
     def get_axis_list(self, axis="x"):
@@ -173,6 +242,11 @@ class PositionArray(np.ndarray):
 
     @property
     def area(self):
+        xarr = self.get_axis_list(axis = "x")
+        yarr = self.get_axis_list(axis = "y")
+        return (xarr.max()-xarr.min(), yarr.max()-yarr.min())
+    @property
+    def area_d(self):
         xarr = self.get_axis_list(axis = "x")
         yarr = self.get_axis_list(axis = "y")
         return (xarr.max()-xarr.min(), yarr.max()-yarr.min())
@@ -214,5 +288,4 @@ class UILC:
     def parse_solver(self, method, *args, **kwargs):
         pass
     def _esc(self, ):
-
-
+        pass
