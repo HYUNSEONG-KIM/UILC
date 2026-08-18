@@ -7,12 +7,12 @@
 ## About The Project
 
 Uniform irradiation light sources are widely used in many industrial and research fields. 
-This project is a python implementation of finding LED locations of array that produces unifrom irradiation on the target plane.
+This project is a python implementation of finding LED locations of array that produces uniform irradiation on the target plane.
 It was mainly focused on application on DIY LED backlight unit design in 3D printing area.
-The project was begined in 2021 to solve the engineering problem of the uniform backlight
+The project was begun in 2021 to solve the engineering problem of the uniform backlight
 of simple LCD lesin printer.
 
-Theorical backgtrounds and further reading sources are written in `theories.ipynb` file in `/docs` directory.
+Theortical backgtrounds and further reading sources are written in `theories.ipynb` file in `/docs` directory.
 
 
 ![](./images/sample.png)
