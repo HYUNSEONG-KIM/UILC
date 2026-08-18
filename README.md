@@ -39,9 +39,9 @@ contents about each modules in the uilc *method* modules.
 
 It is distributed with MIT License. The full text can refer to the `LICENSE` file.
 
-## Theorical Background
+## Theortical Background
 
-See details of implementation and theorical background in `/docs/theories.ipynb`
+See details of implementation and theortical background in `/docs/theories.ipynb`
 
 There are further resources related with
 the project.
